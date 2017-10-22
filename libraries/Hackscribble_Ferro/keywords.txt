@@ -1,0 +1,16 @@
+Hackscribble_Ferro	KEYWORD1
+_select	KEYWORD2
+_deselect	KEYWORD2
+getMaxBufferSize	KEYWORD2
+getBottomAddress	KEYWORD2
+getTopAddress		KEYWORD2
+checkForFRAM		KEYWORD2
+getControlBlockSize	KEYWORD2
+writeControlBlock	KEYWORD2
+readControlBlock	KEYWORD2
+allocateMemory	KEYWORD2
+format	KEYWORD2
+Hackscribble_FerroArray	KEYWORD1
+readElement	KEYWORD2
+writeElement	KEYWORD2
+getStartAddress	KEYWORD2
