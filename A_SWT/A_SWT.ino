@@ -1,4 +1,4 @@
-// A_SWT Rev: 10/21/17.
+// A_SWT Rev: 10/20/17.
 char APPVERSION[21] = "A-SWT Rev. 10/21/17";
 
 // Include the following #define if we want to run the system with just the lower-level track.
