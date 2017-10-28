@@ -21,6 +21,14 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Test_Train_Progress", "Test
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Populate_FRAM_Route_Reference", "Populate_FRAM_Route_Reference\Populate_FRAM_Route_Reference.vcxproj", "{61A74D39-F74D-49E9-A55F-71375CCBEED5}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{E1C96850-FE20-4894-9451-B525582482F9}"
+	ProjectSection(SolutionItems) = preProject
+		libraries\Display2004\Display2004.cpp = libraries\Display2004\Display2004.cpp
+		libraries\Display2004\Display2004.h = libraries\Display2004\Display2004.h
+		libraries\Message_RS485\Message_RS485.cpp = libraries\Message_RS485\Message_RS485.cpp
+		libraries\Message_RS485\Message_RS485.h = libraries\Message_RS485\Message_RS485.h
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x86 = Debug|x86

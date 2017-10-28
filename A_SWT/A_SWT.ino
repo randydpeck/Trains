@@ -101,6 +101,7 @@ const byte PIN_LED             = 13;  // Built-in LED always pin 13
 
 // *** SERIAL LCD DISPLAY:
 #include <Display2004.h>        // Class in quotes means it will be in the A_SWT directory; angle brackets means it will be in the library directory.
+#include <Message_RS485.h>
 // Pass the address of the serial port we want to use (0..3) such as &Serial1, and a valid baud rate such as 9600 or 115200.
 Display2004 LCD2004(&Serial1, 115200);
 // const byte LCD_WIDTH = 20;      // Number of chars wide on the 20x04 LCD displays on the control panel
