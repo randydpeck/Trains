@@ -4,20 +4,20 @@
 #ifndef CHILD1_H
 #define CHILD1_H
 
-#include "Parent.h"
+#include "Message_RS485.h"
 
-class Child1 : public Parent
+class Message_SWT : public Message_RS485
 {
    public:
       // Constructor:
-      Child1(byte  moduleID);
+      Message_SWT(byte  moduleID);
 
       // Command handling methods:
       void method11();
       void method12();
    
    private:
-      byte childDataField;   // A sample child data field.
+      byte _myModuleID;   // A sample child data field.
 
 };
 

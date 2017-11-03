@@ -82,7 +82,6 @@
     <None Include="A_SNS.ino">
       <FileType>CppCode</FileType>
     </None>
-    <None Include="ClassDiagram.cd" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="__vm\.A_SNS.vsarduino.h" />

@@ -1,15 +1,16 @@
 // Child1 class.
 
-#include "Child1.h"
+#include "Message_SWT.h"
 
 // Here is how you call the Parent constructor from the child constructor, passing it the parameter(s) it needs.
-Child1::Child1(byte moduleID) : Parent(moduleID)
+Message_SWT::Message_SWT(byte moduleID) : Message_RS485(moduleID)
 {
-   childDataField = 0;
+   _myModuleID = moduleID;
+   messageRS485(_myModuleID);
 }
 
 
-void Child1::method11()
+void Message_SWT::method11()
 {
    // Items must be PUBLIC or PROTECTED in the parent class to 
    // be visible to derived classes.
@@ -21,7 +22,7 @@ void Child1::method11()
 }
 
 
-void Child1::method12()
+void Message_SWT::method12()
 {
    // A derived class can access visible parent data fields.
    if(myModuleID > 1) childDataField--;

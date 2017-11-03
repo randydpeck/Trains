@@ -101,14 +101,28 @@ const byte PIN_LED             = 13;  // Built-in LED always pin 13
 
 // *** SERIAL LCD DISPLAY:
 #include <Display2004.h>        // Class in quotes means it will be in the A_SWT directory; angle brackets means it will be in the library directory.
-#include <Message_RS485.h>
 // Pass the address of the serial port we want to use (0..3) such as &Serial1, and a valid baud rate such as 9600 or 115200.
 Display2004 LCD2004(&Serial1, 115200);
-// const byte LCD_WIDTH = 20;      // Number of chars wide on the 20x04 LCD displays on the control panel
+Display2004 * ptrLCD2004;
+
+
+
+// const byte LCD_WIDTH = 20;   // Number of chars wide on the 20x04 LCD displays on the control panel
+// *******
+// NEED TO MOVE THIS CONST LCD_WIDTH TO A SHARED HEADER FILE, OUT OF Display2004.h
+// *******
+
+
 // LCD_WIDTH is defined in Display2004.h *outside* of the class header (as of Sat 10/21/17)
 char lcdString[LCD_WIDTH + 1];  // Global array to hold strings sent to Digole 2004 LCD; last char is for null terminator.
 
 // *** RS485 MESSAGES: Here are constants and arrays related to the RS485 messages
+// #include <Message_RS485.h>         // No need to include here because it's included in Message_SWT.h
+#include <Message_RS485.h>              // Class includes all messages sent and received by A_SWT.
+
+Message_RS485 myMessage(ARDUINO_SWT, ptrLCD2004);             // Instantiate the Message_SWT object
+
+  
 // Note that the serial input buffer is only 64 bytes, which means that we need to keep emptying it since there
 // will be many commands between Arduinos, even though most may not be for THIS Arduino.  If the buffer overflows,
 // then we will be totally screwed up (but it will be apparent in the checksum.)
@@ -265,7 +279,7 @@ unsigned long turnoutActivationTime = millis();  // Keeps track of *when* a turn
 byte turnoutCrossRef[(TOTAL_TURNOUTS * 2)] =
   {15,14,13,12,11,10, 9, 8,19,18,17,16,23,22,21,20,79,78,77,76,75,74,73,72,83,82,81,80,87,86,85,84,    // Normals
     0, 1, 2, 3, 4, 5, 6, 7,28,29,30,31,24,25,26,27,64,65,66,67,68,69,70,71,92,93,94,95,88,89,90,91};   // Reverses
-
+  
 // *****************************************************************************************
 // **************************************  S E T U P  **************************************
 // *****************************************************************************************
@@ -279,6 +293,10 @@ void setup() {
   shiftRegister.initialize();           // Set all registers to default
   initializeShiftRegisterPins();        // This ensures NO relays (thus turnout solenoids) are turned on (which would burn out solenoids)
   initializePinIO();                    // Initialize all of the I/O pins
+  
+
+  
+  
   LCD2004.init();                       // Initialize the 20 x 04 Digole serial LCD display
   sprintf(lcdString, APPVERSION);       // Display the application version number on the LCD display
   LCD2004.send(lcdString);
@@ -300,7 +318,7 @@ void loop() {
   checkIfHaltPinPulledLow();  // If someone has pulled the Halt pin low, release relays and just stop
 
   // See if we have an incoming RS485 message...
-  if (RS485GetMessage(RS485MsgIncoming)) {   // If returns true, then we got a complete RS485 message (may or may not be for us)
+  if (myMessage.RS485GetMessage(RS485MsgIncoming)) {   // If returns true, then we got a complete RS485 message (may or may not be for us)
     if (RS485MsgIncoming[RS485_TO_OFFSET] == ARDUINO_SWT) {
       // The incoming message was for us!  It will either be to set a Turnout or a Route or a sting of bits for "last-known" from A-MAS.
       // Byte #3 of RS485MsgIncoming can be 'N' or 'R', for Normal or Revers with a turnout number, or 'T' (for rouTe) or '1' (for Park 1) or
@@ -639,6 +657,8 @@ ISR(WDT_vect) {
 // *** HERE ARE FUNCTIONS USED BY VIRTUALLY ALL ARDUINOS *** REV: 09-26-17 ***
 // ***************************************************************************
 
+/*
+
 bool RS485GetMessage(byte tMsg[]) {
   // 10/19/16: Updated string handling for sendToLCD and Serial.print.
   // 10/1/16: Returns true or false, depending if a complete message was read.
@@ -710,6 +730,8 @@ byte calcChecksumCRC8(const byte data[], byte len) {
   }
   return crc;
 }
+
+*/
 
 void initializeFRAM1AndGetControlBlock() {
   // Rev 09/26/17: Initialize FRAM chip(s), get chip data and control block data including confirm
