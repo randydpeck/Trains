@@ -167,48 +167,8 @@ char APPVERSION[21] = "A-LEG Rev. 10/01/17";
 
 // **************************************************************************************************************************
 
-// *** ARDUINO DEVICE CONSTANTS: Here are all the different Arduinos and their "addresses" (ID numbers) for communication.
-const byte ARDUINO_NUL =  0;  // Use this to initialize etc.
-const byte ARDUINO_MAS =  1;  // Master Arduino (Main controller)
-const byte ARDUINO_LEG =  2;  // Output Legacy interface and accessory relay control
-const byte ARDUINO_SNS =  3;  // Input reads reads status of isolated track sections on layout
-const byte ARDUINO_BTN =  4;  // Input reads button presses by operator on control panel
-const byte ARDUINO_SWT =  5;  // Output throws turnout solenoids (Normal/Reverse) on layout
-const byte ARDUINO_LED =  6;  // Output controls the Green turnout indication LEDs on control panel
-const byte ARDUINO_OCC =  7;  // Output controls the Red/Green and White occupancy LEDs on control panel
-const byte ARDUINO_ALL = 99;  // Master broadcasting to all i.e. mode change
+#include <Train_Consts_Global.h>
 
-// *** ARDUINO PIN NUMBERS: Define Arduino pin numbers used...specific to A-LEG
-const byte PIN_RS485_TX_ENABLE =  4;  // Output: set HIGH when in RS485 transmit mode, LOW when not transmitting
-const byte PIN_RS485_TX_LED    =  5;  // Output: set HIGH to turn on BLUE LED when RS485 is TRANSMITTING data
-const byte PIN_RS485_RX_LED    =  6;  // Output: set HIGH to turn on YELLOW when RS485 is RECEIVING data
-const byte PIN_SPEAKER         =  7;  // Output: Piezo buzzer connects positive here
-const byte PIN_REQ_TX_A_LEG    =  8;  // Output pin pulled LOW by A-LEG when it wants to send message to A-MAS
-const byte PIN_HALT            =  9;  // Output: Pull low to tell A-LEG to issue Legacy Emergency Stop FE FF FF
-const byte PIN_FRAM1           = 11;  // Output: FRAM1 chip select.  Route Reference table and last-known-state of all trains.
-const byte PIN_FRAM2           = 12;  // Output: FRAM2 chip select.  Event Reference and Delayed Action tables.
-const byte PIN_LED             = 13;  // Built-in LED always pin 13
-const byte PIN_FRAM3           = 19;  // Output: FRAM3 chip select.
-const byte PIN_PANEL_BROWN_ON  = 23;  // Input: Control panel "Brown" PowerMaster toggled up.  Pulled LOW.
-const byte PIN_PANEL_BROWN_OFF = 25;  // Input: Control panel "Brown" PowerMaster toggled down.  Pulled LOW.
-const byte PIN_PANEL_BLUE_ON   = 27;  // Input: Control panel "Blue" PowerMaster toggled up.  Pulled LOW.
-const byte PIN_PANEL_BLUE_OFF  = 29;  // Input: Control panel "Blue" PowerMaster toggled down.  Pulled LOW.
-const byte PIN_PANEL_RED_ON    = 31;  // Input: Control panel "Red" PowerMaster toggled up.  Pulled LOW.
-const byte PIN_PANEL_RED_OFF   = 33;  // Input: Control panel "Red" PowerMaster toggled down.  Pulled LOW.
-const byte PIN_PANEL_4_ON      = 35;  // Input: Control panel #4 PowerMaster toggled up.  Pulled LOW.
-const byte PIN_PANEL_4_OFF     = 37;  // Input: Control panel #4 PowerMaster toggled down.  Pulled LOW.
-
-// *** MODE AND STATE DEFINITIONS: We'll need to keep track of what mode we are in.
-const byte MODE_UNDEFINED  = 0;
-const byte MODE_MANUAL     = 1;
-const byte MODE_REGISTER   = 2;
-const byte MODE_AUTO       = 3;
-const byte MODE_PARK       = 4;
-const byte MODE_POV        = 5;
-const byte STATE_UNDEFINED = 0;
-const byte STATE_RUNNING   = 1;
-const byte STATE_STOPPING  = 2;
-const byte STATE_STOPPED   = 3;
 // We will start in MODE_UNDEFINED, STATE_STOPPED.  We must receive a message from A-MAS to tell us otherwise.
 byte modeCurrent = MODE_UNDEFINED;
 byte modeOld = modeCurrent;
@@ -1504,7 +1464,7 @@ void initializePinIO() {
   pinMode(PIN_FRAM2, OUTPUT);
   digitalWrite(PIN_FRAM3, HIGH);    // Chip Select (CS): pull low to enable
   pinMode(PIN_FRAM3, OUTPUT);
-  pinMode(PIN_REQ_TX_A_LEG, INPUT_PULLUP);   // A-LEG will pull this pin LOW when it wants to send A-MAS a message
+  pinMode(PIN_REQ_TX_A_LEG_OUT, INPUT_PULLUP);   // A-LEG will pull this pin LOW when it wants to send A-MAS a message
   digitalWrite(PIN_HALT, HIGH);
   pinMode(PIN_HALT, INPUT);                  // HALT pin: monitor if gets pulled LOW it means someone tripped HALT.  Or change to output mode and pull LOW if we want to trip HALT.
   digitalWrite(PIN_RS485_TX_ENABLE, RS485_RECEIVE);  // Put RS485 in receive mode

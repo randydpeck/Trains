@@ -53,47 +53,32 @@ char APPVERSION[21] = "A-BTN Rev. 10/01/17";
 
 // **************************************************************************************************************************
 
-// *** ARDUINO DEVICE CONSTANTS: Here are all the different Arduinos and their "addresses" (ID numbers) for communication.
-const byte ARDUINO_NUL =  0;  // Use this to initialize etc.
-const byte ARDUINO_MAS =  1;  // Master Arduino (Main controller)
-const byte ARDUINO_LEG =  2;  // Output Legacy interface and accessory relay control
-const byte ARDUINO_SNS =  3;  // Input reads reads status of isolated track sections on layout
-const byte ARDUINO_BTN =  4;  // Input reads button presses by operator on control panel
-const byte ARDUINO_SWT =  5;  // Output throws turnout solenoids (Normal/Reverse) on layout
-const byte ARDUINO_LED =  6;  // Output controls the Green turnout indication LEDs on control panel
-const byte ARDUINO_OCC =  7;  // Output controls the Red/Green and White occupancy LEDs on control panel
-const byte ARDUINO_ALL = 99;  // Master broadcasting to all i.e. mode change
 
-// *** ARDUINO PIN NUMBERS: Define Arduino pin numbers used...specific to A-BTN
-const byte PIN_RS485_TX_ENABLE =  4;  // Output: set HIGH when in RS485 transmit mode, LOW when not transmitting
-const byte PIN_RS485_TX_LED    =  5;  // Output: set HIGH to turn on BLUE LED when RS485 is TRANSMITTING data
-const byte PIN_RS485_RX_LED    =  6;  // Output: set HIGH to turn on YELLOW when RS485 is RECEIVING data
-const byte PIN_SPEAKER         =  7;  // Output: Piezo buzzer connects positive here
-const byte PIN_REQ_TX_A_BTN    =  8;  // Output pin pulled LOW by A-BTN when it wants to tell us a turnout button has been pressed
-const byte PIN_HALT            =  9;  // Output: Pull low to tell A-LEG to issue Legacy Emergency Stop FE FF FF
-const byte PIN_LED             = 13;  // Built-in LED always pin 13
 
-// *** MODE AND STATE DEFINITIONS: We'll need to keep track of what mode we are in.
-const byte MODE_UNDEFINED  = 0;
-const byte MODE_MANUAL     = 1;
-const byte MODE_REGISTER   = 2;
-const byte MODE_AUTO       = 3;
-const byte MODE_PARK       = 4;
-const byte MODE_POV        = 5;
-const byte STATE_UNDEFINED = 0;
-const byte STATE_RUNNING   = 1;
-const byte STATE_STOPPING  = 2;
-const byte STATE_STOPPED   = 3;
+
+
+
+
+
+// 11/5/17: NEED TO MODIFY to be like A-SWT using new LCD library, and remove redundant functions at end of code
+
+
+
+
+
+
+
+
+#include <Train_Consts_Global.h>
+
 // We will start in MODE_UNDEFINED, STATE_STOPPED.  We must receive a message from A-MAS to tell us otherwise.
 byte modeCurrent  = MODE_UNDEFINED;
 byte stateCurrent = STATE_STOPPED;
                               
 // *** SERIAL LCD DISPLAY: The following lines are required by the Digole serial LCD display, connected to serial port 1.
-const byte LCD_WIDTH = 20;        // Number of chars wide on the 20x04 LCD displays on the control panel
 #define _Digole_Serial_UART_      // To tell compiler compile the serial communication only
 #include <DigoleSerial.h>
 DigoleSerialDisp LCDDisplay(&Serial1, 115200); //UART TX on arduino to RX on module
-char lcdString[LCD_WIDTH + 1];    // Global array to hold strings sent to Digole 2004 LCD; last char is for null terminator.
 
 // *** RS485 MESSAGES: Here are constants and arrays related to the RS485 messages
 // Note that the serial input buffer is only 64 bytes, which means that we need to keep emptying it since there
@@ -206,8 +191,8 @@ void initializePinIO() {
   pinMode(PIN_SPEAKER, OUTPUT);
   digitalWrite(PIN_LED, HIGH);      // Built-in LED
   pinMode(PIN_LED, OUTPUT);
-  digitalWrite(PIN_REQ_TX_A_BTN, HIGH);
-  pinMode(PIN_REQ_TX_A_BTN, OUTPUT);   // When a button has been pressed, tell A-MAS by pulling this pin LOW
+  digitalWrite(PIN_REQ_TX_A_BTN_OUT, HIGH);
+  pinMode(PIN_REQ_TX_A_BTN_OUT, OUTPUT);   // When a button has been pressed, tell A-MAS by pulling this pin LOW
   digitalWrite(PIN_HALT, HIGH);
   pinMode(PIN_HALT, INPUT);                  // HALT pin: monitor if gets pulled LOW it means someone tripped HALT.  Or change to output mode and pull LOW if we want to trip HALT.
   digitalWrite(PIN_RS485_TX_ENABLE, RS485_RECEIVE);  // Put RS485 in receive mode
@@ -281,8 +266,8 @@ void sendRS485ButtonPressUpdate(const byte tButtonPressed) {
   // Send an RS485 message to A-MAS indicating which turnout toggle button the operator just pressed.
   // Rev 09/13/17.
 
-  // First pull PIN_REQ_TX_A_BTN digital line low, to tell A-MAS that we want to send it a "turnout button pressed" message...
-  digitalWrite(PIN_REQ_TX_A_BTN, LOW);
+  // First pull PIN_REQ_TX_A_BTN_OUT digital line low, to tell A-MAS that we want to send it a "turnout button pressed" message...
+  digitalWrite(PIN_REQ_TX_A_BTN_OUT, LOW);
 
   // Wait for an RS485 command from A-MAS requesting button status.  Remember that it's possible that we may
   // receive some RS485 messages that are irrelevant first, so ignore all RS485 messages until we see one to A-BTN.
@@ -304,7 +289,7 @@ void sendRS485ButtonPressUpdate(const byte tButtonPressed) {
   }
 
   // Release the REQ_TX_A_BTN "I have a message for you, A-MAS" digital line back to HIGH state...
-  digitalWrite(PIN_REQ_TX_A_BTN, HIGH);
+  digitalWrite(PIN_REQ_TX_A_BTN_OUT, HIGH);
 
   // Format and send the new status: Length, To, From, 'B', button number (byte), CRC
   RS485MsgOutgoing[RS485_LEN_OFFSET] = 6;   // Byte 0.  Length is 6 bytes.

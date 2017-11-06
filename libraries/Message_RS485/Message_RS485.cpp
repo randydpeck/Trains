@@ -1,8 +1,9 @@
-// Parent class.
+// Message_RS485 is the base class that handles both RS485 and digital-pin communications.
+// Rev: 11/04/17
 
 #include <Message_RS485.h>
 
-Message_RS485::Message_RS485(byte ID, Display2004 * LCD2004)
+Message_RS485::Message_RS485(byte ID, Display_2004 * LCD2004)
 {
    myModuleID = ID;
    myLCD = LCD2004;

@@ -163,42 +163,8 @@ char APPVERSION[21] = "A-OCC Rev. 10/01/17";
 
 // **************************************************************************************************************************
 
-// *** ARDUINO DEVICE CONSTANTS: Here are all the different Arduinos and their "addresses" (ID numbers) for communication.
-const byte ARDUINO_NUL =  0;  // Use this to initialize etc.
-const byte ARDUINO_MAS =  1;  // Master Arduino (Main controller)
-const byte ARDUINO_LEG =  2;  // Output Legacy interface and accessory relay control
-const byte ARDUINO_SNS =  3;  // Input reads reads status of isolated track sections on layout
-const byte ARDUINO_BTN =  4;  // Input reads button presses by operator on control panel
-const byte ARDUINO_SWT =  5;  // Output throws turnout solenoids (Normal/Reverse) on layout
-const byte ARDUINO_LED =  6;  // Output controls the Green turnout indication LEDs on control panel
-const byte ARDUINO_OCC =  7;  // Output controls the Red/Green and White occupancy LEDs on control panel
-const byte ARDUINO_ALL = 99;  // Master broadcasting to all i.e. mode change
+#include <Train_Consts_Global.h>
 
-// *** ARDUINO PIN NUMBERS: Define Arduino pin numbers used...specific to A-OCC
-const byte PIN_ROTARY_1        =  2;  // Input: Rotary Encoder pin 1 of 2 (plus Select)
-const byte PIN_ROTARY_2        =  3;  // Input: Rotary Encoder pin 2 of 2 (plus Select)
-const byte PIN_RS485_TX_ENABLE =  4;  // Output: set HIGH when in RS485 transmit mode, LOW when not transmitting
-const byte PIN_RS485_TX_LED    =  5;  // Output: set HIGH to turn on BLUE LED when RS485 is TRANSMITTING data
-const byte PIN_RS485_RX_LED    =  6;  // Output: set HIGH to turn on YELLOW when RS485 is RECEIVING data
-const byte PIN_SPEAKER         =  7;  // Output: Piezo buzzer connects positive here
-const byte PIN_HALT            =  9;  // Output: Pull low to tell A-LEG to issue Legacy Emergency Stop FE FF FF
-const byte PIN_WAV_TRIGGER     = 10;  // Input: LOW when a track is playing, else HIGH.
-const byte PIN_FRAM1           = 11;  // Digital pin 11 is CS for FRAM1, for Route Reference table used by many, and last-known-state of all trains
-const byte PIN_FRAM2           = 12;  // FRAM2 used by A-LEG for Event Reference and Delayed Action tables
-const byte PIN_LED             = 13;  // Built-in LED always pin 13
-const byte PIN_ROTARY_PUSH     = 19;  // Input: Rotary Encoder "Select" (pushbutton) pin
-
-// *** MODE AND STATE DEFINITIONS: We'll need to keep track of what mode we are in.
-const byte MODE_UNDEFINED  = 0;
-const byte MODE_MANUAL     = 1;
-const byte MODE_REGISTER   = 2;
-const byte MODE_AUTO       = 3;
-const byte MODE_PARK       = 4;
-const byte MODE_POV        = 5;
-const byte STATE_UNDEFINED = 0;
-const byte STATE_RUNNING   = 1;
-const byte STATE_STOPPING  = 2;
-const byte STATE_STOPPED   = 3;
 // We will start in MODE_UNDEFINED, STATE_STOPPED.  We must receive a message from A-MAS to tell us otherwise.
 byte modeCurrent = MODE_UNDEFINED;
 byte modeOld = modeCurrent;

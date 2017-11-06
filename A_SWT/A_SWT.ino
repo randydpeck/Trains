@@ -1,5 +1,5 @@
 // A_SWT Rev: 10/20/17.
-char APPVERSION[21] = "A-SWT Rev. 10/21/17";
+char APPVERSION[21] = "A-SWT Rev. 11/04/17";
 
 // Include the following #define if we want to run the system with just the lower-level track.
 #define SINGLE_LEVEL     // Comment this out for full double-level routes.  Use it for single-level route testing.
@@ -8,7 +8,7 @@ char APPVERSION[21] = "A-SWT Rev. 10/21/17";
 // This is an "INPUT-ONLY" module that does not provide data to any other Arduino.
 
 // IMPORTANT: LARGE AMOUNTS OF THIS CODE ARE IDENTIAL IN A-LED, SO ALWAYS UPDATE A-LED WHEN WE MAKE CHANGES TO THIS CODE.
-// 10/20/17: Converted SendToLCD/InitializeLCD to OOP object Display2004/LCD2004.
+// 10/20/17: Converted SendToLCD/InitializeLCD to OOP object Display_2004/LCD2004.
 // 09/16/17: Changed variable suffixes from Length to Len, No/Number to Num, Record to Rec, etc.
 // 08/29/17: Cleaning up code, updated RS485 message protocol comments.
 // 11/02/16: initializeShiftRegisterPins() and delay in sendToLCD()
@@ -78,49 +78,21 @@ char APPVERSION[21] = "A-SWT Rev. 10/21/17";
 
 // **************************************************************************************************************************
 
-// *** ARDUINO DEVICE CONSTANTS: Here are all the different Arduinos and their "addresses" (ID numbers) for communication.
-const byte ARDUINO_NUL =  0;  // Use this to initialize etc.
-const byte ARDUINO_MAS =  1;  // Master Arduino (Main controller)
-const byte ARDUINO_LEG =  2;  // Output Legacy interface and accessory relay control
-const byte ARDUINO_SNS =  3;  // Input reads reads status of isolated track sections on layout
-const byte ARDUINO_BTN =  4;  // Input reads button presses by operator on control panel
-const byte ARDUINO_SWT =  5;  // Output throws turnout solenoids (Normal/Reverse) on layout
-const byte ARDUINO_LED =  6;  // Output controls the Green turnout indication LEDs on control panel
-const byte ARDUINO_OCC =  7;  // Output controls the Red/Green and White occupancy LEDs on control panel
-const byte ARDUINO_ALL = 99;  // Master broadcasting to all i.e. mode change
 
-// *** ARDUINO PIN NUMBERS: Define Arduino pin numbers used...specific to A-SWT
-const byte PIN_RS485_TX_ENABLE =  4;  // Output: set HIGH when in RS485 transmit mode, LOW when not transmitting
-const byte PIN_RS485_TX_LED    =  5;  // Output: set HIGH to turn on BLUE LED when RS485 is TRANSMITTING data
-const byte PIN_RS485_RX_LED    =  6;  // Output: set HIGH to turn on YELLOW when RS485 is RECEIVING data
-const byte PIN_SPEAKER         =  7;  // Output: Piezo buzzer connects positive here
-const byte PIN_HALT            =  9;  // Output: Pull low to tell A-LEG to issue Legacy Emergency Stop FE FF FF
-const byte PIN_FRAM1           = 11;  // Digital pin 11 is CS for FRAM1, for Route Reference table used by many, and last-known-state of all trains
-const byte PIN_FRAM2           = 12;  // FRAM2 used by A-LEG for Event Reference and Delayed Action tables
-const byte PIN_LED             = 13;  // Built-in LED always pin 13
+
+#include <Train_Consts_Global.h>
+#include <Train_Fns_Vars_Global.h>
 
 // *** SERIAL LCD DISPLAY:
-#include <Display2004.h>        // Class in quotes means it will be in the A_SWT directory; angle brackets means it will be in the library directory.
+#include <Display_2004.h>        // Class in quotes means it will be in the A_SWT directory; angle brackets means it will be in the library directory.
 // Pass the address of the serial port we want to use (0..3) such as &Serial1, and a valid baud rate such as 9600 or 115200.
-Display2004 LCD2004(&Serial1, 115200);
-Display2004 * ptrLCD2004;
+Display_2004 LCD2004(&Serial1, 115200);
+Display_2004 * ptrLCD2004;       // We need this pointer to pass to any other classes if we want them to be able to write to the LCD display.
 
-
-
-// const byte LCD_WIDTH = 20;   // Number of chars wide on the 20x04 LCD displays on the control panel
-// *******
-// NEED TO MOVE THIS CONST LCD_WIDTH TO A SHARED HEADER FILE, OUT OF Display2004.h
-// *******
-
-
-// LCD_WIDTH is defined in Display2004.h *outside* of the class header (as of Sat 10/21/17)
-char lcdString[LCD_WIDTH + 1];  // Global array to hold strings sent to Digole 2004 LCD; last char is for null terminator.
-
-// *** RS485 MESSAGES: Here are constants and arrays related to the RS485 messages
-// #include <Message_RS485.h>         // No need to include here because it's included in Message_SWT.h
-#include <Message_RS485.h>              // Class includes all messages sent and received by A_SWT.
-
-Message_RS485 myMessage(ARDUINO_SWT, ptrLCD2004);             // Instantiate the Message_SWT object
+#include <Message_SWT.h>              // Class includes all messages sent and received by A_SWT.
+// It might be unnecessary for the following to pass ARDUINO_SWT, since the child class that we instantiate will always be for
+// a specific module (or pair, in the case of A_SWT/A_LED)
+Message_SWT myMessage(ARDUINO_SWT, ptrLCD2004);    // Instantiate the Message_SWT object
 
   
 // Note that the serial input buffer is only 64 bytes, which means that we need to keep emptying it since there
@@ -139,7 +111,7 @@ const byte RS485_RECEIVE     = LOW;   // LOW = 0x0.  How to set TX_CONTROL pin w
 // *** SHIFT REGISTER: The following lines are required by the Centipede input/output shift registers.
 #include <Wire.h>                 // Needed for Centipede shift register
 #include <Centipede.h>
-Centipede shiftRegister;          // create Centipede shift register object
+Centipede shiftRegister;          // Create Centipede shift register object
 
 // *** FRAM MEMORY MODULE:  Constants and variables needed for use with Hackscribble Ferro RAM.
 // FRAM is used to store the Route Reference Table, the Delayed Action Table, and other data.
@@ -782,6 +754,7 @@ void initializeFRAM1AndGetControlBlock() {
   return;
 }
 
+/*
 void endWithFlashingLED(int numFlashes) {
   // Rev 10/05/16: Version for Arduinos WITH relays that should be released (A-SWT turnouts, A-LEG accessories)
   initializeShiftRegisterPins();  // Release all relay coils that might be activating turnout solenoids
@@ -797,24 +770,7 @@ void endWithFlashingLED(int numFlashes) {
   }
   return;  // Will never get here due to above infinite loop
 }
-
-void chirp() {
-  // Rev 10/05/16
-  digitalWrite(PIN_SPEAKER, LOW);  // turn on piezo
-  delay(10);
-  digitalWrite(PIN_SPEAKER, HIGH);
-  return;
-}
-
-void requestEmergencyStop() {
-  // Rev 10/05/16
-  pinMode(PIN_HALT, OUTPUT);
-  digitalWrite(PIN_HALT, LOW);   // Pulling this low tells all Arduinos to HALT (including A-LEG)
-  delay(1000);
-  digitalWrite(PIN_HALT, HIGH);  
-  pinMode(PIN_HALT, INPUT);
-  return;
-}
+*/
 
 void checkIfHaltPinPulledLow() {
   // Rev 10/29/16

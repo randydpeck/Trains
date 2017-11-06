@@ -75,25 +75,7 @@ char APPVERSION[21] = "A-SNS Rev. 10/01/17";
 
 // **************************************************************************************************************************
 
-// *** ARDUINO DEVICE CONSTANTS: Here are all the different Arduinos and their "addresses" (ID numbers) for communication.
-const byte ARDUINO_NUL =  0;  // Use this to initialize etc.
-const byte ARDUINO_MAS =  1;  // Master Arduino (Main controller)
-const byte ARDUINO_LEG =  2;  // Output Legacy interface and accessory relay control
-const byte ARDUINO_SNS =  3;  // Input reads reads status of isolated track sections on layout
-const byte ARDUINO_BTN =  4;  // Input reads button presses by operator on control panel
-const byte ARDUINO_SWT =  5;  // Output throws turnout solenoids (Normal/Reverse) on layout
-const byte ARDUINO_LED =  6;  // Output controls the Green turnout indication LEDs on control panel
-const byte ARDUINO_OCC =  7;  // Output controls the Red/Green and White occupancy LEDs on control panel
-const byte ARDUINO_ALL = 99;  // Master broadcasting to all i.e. mode change
-
-// *** ARDUINO PIN NUMBERS: Define Arduino pin numbers used...specific to A-SNS
-const byte PIN_RS485_TX_ENABLE =  4;  // Output: set HIGH when in RS485 transmit mode, LOW when not transmitting
-const byte PIN_RS485_TX_LED    =  5;  // Output: set HIGH to turn on BLUE LED when RS485 is TRANSMITTING data
-const byte PIN_RS485_RX_LED    =  6;  // Output: set HIGH to turn on YELLOW when RS485 is RECEIVING data
-const byte PIN_SPEAKER         =  7;  // Output: Piezo buzzer connects positive here
-const byte PIN_REQ_TX_A_SNS    =  8;  // Output pin pulled LOW by A-SNS when it wants to tell us a sensor has changed
-const byte PIN_HALT            =  9;  // Output: Pull low to tell A-LEG to issue Legacy Emergency Stop FE FF FF
-const byte PIN_LED             = 13;  // Built-in LED always pin 13
+#include <Train_Consts_Global.h>
 
 // *** SERIAL LCD DISPLAY: The following lines are required by the Digole serial LCD display, connected to serial port 1.
 const byte LCD_WIDTH = 20;        // Number of chars wide on the 20x04 LCD displays on the control panel
@@ -249,8 +231,8 @@ void initializePinIO() {
   pinMode(PIN_SPEAKER, OUTPUT);
   digitalWrite(PIN_LED, HIGH);      // Built-in LED
   pinMode(PIN_LED, OUTPUT);
-  digitalWrite(PIN_REQ_TX_A_SNS, HIGH);
-  pinMode(PIN_REQ_TX_A_SNS, OUTPUT);   // When a button has been pressed, tell A-MAS by pulling this pin LOW
+  digitalWrite(PIN_REQ_TX_A_SNS_OUT, HIGH);
+  pinMode(PIN_REQ_TX_A_SNS_OUT, OUTPUT);   // When a button has been pressed, tell A-MAS by pulling this pin LOW
   digitalWrite(PIN_HALT, HIGH);
   pinMode(PIN_HALT, INPUT);                  // HALT pin: monitor if gets pulled LOW it means someone tripped HALT.  Or change to output mode and pull LOW if we want to trip HALT.
   digitalWrite(PIN_RS485_TX_ENABLE, RS485_RECEIVE);  // Put RS485 in receive mode
@@ -275,7 +257,7 @@ void initializeShiftRegisterPins() {
 void RS485fromSNStoMAS_SendSensorUpdate(const byte tSensorNum, const byte tChangeType) {
   // Rev: 09/30/17.
   // Pull digital pin LOW to tell A-MAS we have a sensor change to report, please query us...
-  digitalWrite (PIN_REQ_TX_A_SNS, LOW);
+  digitalWrite (PIN_REQ_TX_A_SNS_OUT, LOW);
   // Wait for an RS485 command from A-MAS requesting sensor status.  Remember that it's possible that we may
   // receive some RS485 messages that are irrelevant first, so ignore all RS485 messages until we see one to A-SNS.
   // Also check if the Halt line has been pulled low, in case something crashed and message will never arrive.
@@ -293,7 +275,7 @@ void RS485fromSNStoMAS_SendSensorUpdate(const byte tSensorNum, const byte tChang
     endWithFlashingLED(6);
   }
   // Release the REQ_TX_A_SNS "I have a message for you, A-MAS" digital line back to HIGH state...
-  digitalWrite (PIN_REQ_TX_A_SNS, HIGH);
+  digitalWrite (PIN_REQ_TX_A_SNS_OUT, HIGH);
   // Format and send the new status: Length, To, From, 'S', sensor number (byte), 0 if cleared or 1 if tripped, CRC
   RS485MsgOutgoing[RS485_LEN_OFFSET] = 7;  // Byte 0.  Length is 7 bytes.
   RS485MsgOutgoing[RS485_TO_OFFSET] = ARDUINO_MAS;  // Byte 1.

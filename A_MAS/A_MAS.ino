@@ -215,55 +215,8 @@ char APPVERSION[21] = "A-MAS Rev. 10/01/17";
 
 // **************************************************************************************************************************
 
-// *** ARDUINO DEVICE CONSTANTS: Here are all the different Arduinos and their "addresses" (ID numbers) for communication.
-const byte ARDUINO_NUL =  0;  // Use this to initialize etc.
-const byte ARDUINO_MAS =  1;  // Master Arduino (Main controller)
-const byte ARDUINO_LEG =  2;  // Output Legacy interface and accessory relay control
-const byte ARDUINO_SNS =  3;  // Input reads reads status of isolated track sections on layout
-const byte ARDUINO_BTN =  4;  // Input reads button presses by operator on control panel
-const byte ARDUINO_SWT =  5;  // Output throws turnout solenoids (Normal/Reverse) on layout
-const byte ARDUINO_LED =  6;  // Output controls the Green turnout indication LEDs on control panel
-const byte ARDUINO_OCC =  7;  // Output controls the Red/Green and White occupancy LEDs on control panel
-const byte ARDUINO_ALL = 99;  // Master broadcasting to all i.e. mode change
+#include <Train_Consts_Global.h>
 
-// *** ARDUINO PIN NUMBERS: Define Arduino pin numbers used...specific to A-MAS
-const byte PIN_REQ_TX_A_LEG        =  2;  // Input pin pulled LOW by A-LEG when it wants to send us a message such as Halt
-const byte PIN_REQ_TX_A_SNS        =  3;  // Input pin pulled LOW by A-SNS when it wants to tell us of an occupancy sensor change
-const byte PIN_RS485_TX_ENABLE     =  4;  // Output: set HIGH when in RS485 transmit mode, LOW when not transmitting
-const byte PIN_RS485_TX_LED        =  5;  // Output: set HIGH to turn on BLUE LED when RS485 is TRANSMITTING data
-const byte PIN_RS485_RX_LED        =  6;  // Output: set HIGH to turn on YELLOW when RS485 is RECEIVING data
-const byte PIN_SPEAKER             =  7;  // Output: Piezo buzzer connects positive here
-const byte PIN_REQ_TX_A_BTN        =  8;  // Input pin pulled LOW by A-BTN when it wants to tell us a turnout button has been pressed
-const byte PIN_HALT                =  9;  // Output: Pull low to tell A-LEG to issue Legacy Emergency Stop FE FF FF
-const byte PIN_FRAM1               = 11;  // Digital pin 11 is CS for FRAM1, for Route Reference table used by many, and last-known-state of all trains
-const byte PIN_FRAM2               = 12;  // FRAM2 used by A-LEG for Event Reference and Delayed Action tables
-const byte PIN_LED                 = 13;  // Built-in LED always pin 13
-const byte PIN_ROTARY_MANUAL       = 23;  // Input: Rotary mode "Manual."  Pulled LOW.
-const byte PIN_ROTARY_REGISTER     = 25;  // Input: Rotary mode "Register."  Pulled LOW.
-const byte PIN_ROTARY_AUTO         = 27;  // Input: Rotary mode "Auto."  Pulled LOW
-const byte PIN_ROTARY_PARK         = 29;  // Input: Rotary mode "Park."  Pulled LOW
-const byte PIN_ROTARY_POV          = 31;  // Input: Rotary mode "P.O.V."  Pulled LOW
-const byte PIN_ROTARY_START        = 33;  // Input: Rotary "Start" button.  Pulled LOW
-const byte PIN_ROTARY_STOP         = 35;  // Input: Rotary "Stop" button.  Pulled LOW
-const byte PIN_ROTARY_LED_START    = 37;  // Output: Rotary Start button internal LED.  Pull LOW to turn on.
-const byte PIN_ROTARY_LED_STOP     = 39;  // Output: Rotary Stop button internal LED.  Pull LOW to turn on.
-const byte PIN_ROTARY_LED_MANUAL   = 41;  // Output: Rotary Manual position LED.  Pull LOW to turn on.
-const byte PIN_ROTARY_LED_REGISTER = 43;  // Output: Rotary Register position LED.  Pull LOW to turn on.
-const byte PIN_ROTARY_LED_AUTO     = 45;  // Output: Rotary Auto position LED.  Pull LOW to turn on.
-const byte PIN_ROTARY_LED_PARK     = 47;  // Output: Rotary Park position LED.  Pull LOW to turn on.
-const byte PIN_ROTARY_LED_POV      = 49;  // Output: Rotary P.O.V. position LED.  Pull LOW to turn on.
-
-// *** MODE AND STATE DEFINITIONS: We'll need to keep track of what mode we are in.
-const byte MODE_UNDEFINED  = 0;
-const byte MODE_MANUAL     = 1;
-const byte MODE_REGISTER   = 2;
-const byte MODE_AUTO       = 3;
-const byte MODE_PARK       = 4;
-const byte MODE_POV        = 5;
-const byte STATE_UNDEFINED = 0;
-const byte STATE_RUNNING   = 1;
-const byte STATE_STOPPING  = 2;
-const byte STATE_STOPPED   = 3;
 // We will start in MODE_UNDEFINED, STATE_STOPPED.  User must press illuminated Start button to start a mode.
 byte modeCurrent = MODE_UNDEFINED;
 byte stateCurrent = STATE_STOPPED;
@@ -1000,9 +953,9 @@ void initializePinIO() {
   pinMode(PIN_FRAM1, OUTPUT);
   digitalWrite(PIN_FRAM2, HIGH);    // Chip Select (CS): pull low to enable
   pinMode(PIN_FRAM2, OUTPUT);
-  pinMode(PIN_REQ_TX_A_LEG, INPUT_PULLUP);   // A-LEG will pull this pin LOW when it wants to send A-MAS a message
-  pinMode(PIN_REQ_TX_A_SNS, INPUT_PULLUP);   // Ditto for A-SNS i.e. an occupancy sensor has been tripped or cleared
-  pinMode(PIN_REQ_TX_A_BTN, INPUT_PULLUP);   // Ditto for A-BTN i.e. a button has been pressed
+  pinMode(PIN_REQ_TX_A_LEG_IN, INPUT_PULLUP);   // A-LEG will pull this pin LOW when it wants to send A-MAS a message
+  pinMode(PIN_REQ_TX_A_SNS_IN, INPUT_PULLUP);   // Ditto for A-SNS i.e. an occupancy sensor has been tripped or cleared
+  pinMode(PIN_REQ_TX_A_BTN_IN, INPUT_PULLUP);   // Ditto for A-BTN i.e. a button has been pressed
   digitalWrite(PIN_HALT, HIGH);
   pinMode(PIN_HALT, INPUT);                  // HALT pin: monitor if gets pulled LOW it means someone tripped HALT.  Or change to output mode and pull LOW if we want to trip HALT.
   digitalWrite(PIN_RS485_TX_ENABLE, RS485_RECEIVE);  // Put RS485 in receive mode
@@ -1215,7 +1168,7 @@ void throwTurnoutIfRequested() {
   // This is only called (periodically) when in MANUAL and maybe P.O.V. modes.
   // Checks to see if operator pressed a "throw turnout" button on the control panel, and executes if so.
   // Check status of pin 8 (coming from A-BTN) and see if it's been pulled LOW, indicating button was pressed.
-  if ((digitalRead(PIN_REQ_TX_A_BTN)) == LOW) {    // A-BTN wants to send us an RS485 message a turnout button has been pressed
+  if ((digitalRead(PIN_REQ_TX_A_BTN_IN)) == LOW) {    // A-BTN wants to send us an RS485 message a turnout button has been pressed
     // Send RS485 message to A-BTN asking for turnout button press update.
     // A-BTN only knows of a button press; it doesn't know what state the turnout was in or which turnout LED is lit.
     RS485MsgOutgoing[RS485_LEN_OFFSET] = 5;   // Byte 0.  Length is 5 bytes: Length, To, From, 'B', CRC
@@ -1308,7 +1261,7 @@ bool sensorChanged(byte * tNum, byte * tStatus) {
   // Sample call: if (sensorChanged(&sensorUpdate.sensorNum, &sensorUpdate.status)) {}
   // Real sensor number 1..52 (no such sensor as zero, fyi), status 0=cleared or 1=tripped.
   // If A-SNS detects a sensor change on the layout, it will pull a digital pin low to ask us to query it.
-  if ((digitalRead(PIN_REQ_TX_A_SNS)) == LOW) {     // A-SNS wants to send us an RS485 message for occupancy sensor change
+  if ((digitalRead(PIN_REQ_TX_A_SNS_IN)) == LOW) {     // A-SNS wants to send us an RS485 message for occupancy sensor change
     RS485MsgOutgoing[RS485_LEN_OFFSET] = 5;
     RS485MsgOutgoing[RS485_TO_OFFSET] = ARDUINO_SNS;
     RS485MsgOutgoing[RS485_FROM_OFFSET] = ARDUINO_MAS;

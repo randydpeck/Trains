@@ -1,8 +1,9 @@
-// Display2004.cpp
+// Display_2004 handles display of messages from the modules to the 20-char, 4-line (2004) Digole LCD display.
+// Rev: 11/04/17
 
-#include <Display2004.h>
+#include <Display_2004.h>
 
-Display2004::Display2004(HardwareSerial * hdwrSerial, unsigned long baud) {  // This is the constructor; not called until an instance is created
+Display_2004::Display_2004(HardwareSerial * hdwrSerial, unsigned long baud) {  // This is the constructor; not called until an instance is created
 
   // hdwrSerial needs to be the address of Serial thru Serial3, and baud can be any legit baud rate such as 115200.
   _display = new DigoleSerialDisp(hdwrSerial, baud);  // _display is a pointer to a DigoleSerialDisp type (which is itself an object)
@@ -10,7 +11,7 @@ Display2004::Display2004(HardwareSerial * hdwrSerial, unsigned long baud) {  // 
 
 }
 
-void Display2004::init() {
+void Display_2004::init() {
 
   _display->begin();                     // Required to initialize LCD
   _display->setLCDColRow(LCD_WIDTH, 4);  // Maps starting RAM address on LCD (if other than 1602)
@@ -23,7 +24,7 @@ void Display2004::init() {
 
 }
 
-void Display2004::send(const char nextLine[]) {
+void Display_2004::send(const char nextLine[]) {
 
   // Display a line of information on the bottom line of the 2004 LCD display on the control panel, and scroll the old lines up.
   // Rev 10/20/17: Converted to OOP and rolled Digole class into this class.
