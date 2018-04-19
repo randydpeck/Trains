@@ -1,5 +1,5 @@
-// A_OCC Rev: 10/01/17.
-char APPVERSION[21] = "A-OCC Rev. 10/01/17";
+// A_OCC Rev: 12/03/17.
+char APPVERSION[21] = "A-OCC Rev. 12/03/17";
 
 // Include the following #define if we want to run the system with just the lower-level track.
 #define SINGLE_LEVEL     // Comment this out for full double-level routes.  Use it for single-level route testing.
@@ -164,6 +164,11 @@ char APPVERSION[21] = "A-OCC Rev. 10/01/17";
 // **************************************************************************************************************************
 
 #include <Train_Consts_Global.h>
+const byte THIS_MODULE = ARDUINO_BTN;  // Not sure if/where I will use this - intended if I call a common function but will this "global" be seen there?
+byte RS485MsgIncoming[RS485_MAX_LEN];  // No need to initialize contents
+byte RS485MsgOutgoing[RS485_MAX_LEN];
+
+char lcdString[LCD_WIDTH + 1];                   // Global array to hold strings sent to Digole 2004 LCD; last char is for null terminator.
 
 // We will start in MODE_UNDEFINED, STATE_STOPPED.  We must receive a message from A-MAS to tell us otherwise.
 byte modeCurrent = MODE_UNDEFINED;
@@ -174,25 +179,25 @@ byte stateOld = stateCurrent;
 bool stateChanged = false;
 
 // *** SERIAL LCD DISPLAY: The following lines are required by the Digole serial LCD display, connected to serial port 1.
-const byte LCD_WIDTH = 20;        // Number of chars wide on the 20x04 LCD displays on the control panel
+//const byte LCD_WIDTH = 20;        // Number of chars wide on the 20x04 LCD displays on the control panel
 #define _Digole_Serial_UART_      // To tell compiler compile the serial communication only
 #include <DigoleSerial.h>
 DigoleSerialDisp LCDDisplay(&Serial1, 115200); //UART TX on arduino to RX on module
-char lcdString[LCD_WIDTH + 1];    // Global array to hold strings sent to Digole 2004 LCD; last char is for null terminator.
+//char lcdString[LCD_WIDTH + 1];    // Global array to hold strings sent to Digole 2004 LCD; last char is for null terminator.
 
 // *** RS485 MESSAGES: Here are constants and arrays related to the RS485 messages
 // Note that the serial input buffer is only 64 bytes, which means that we need to keep emptying it since there
 // will be many commands between Arduinos, even though most may not be for THIS Arduino.  If the buffer overflows,
 // then we will be totally screwed up (but it will be apparent in the checksum.)
-const byte RS485_MAX_LEN     = 20;    // buffer length to hold the longest possible RS485 message.  Just a guess.
-      byte RS485MsgIncoming[RS485_MAX_LEN];  // No need to initialize contents
-      byte RS485MsgOutgoing[RS485_MAX_LEN];
-const byte RS485_LEN_OFFSET  =  0;    // first byte of message is always total message length in bytes
-const byte RS485_TO_OFFSET   =  1;    // second byte of message is the ID of the Arduino the message is addressed to
-const byte RS485_FROM_OFFSET =  2;    // third byte of message is the ID of the Arduino the message is coming from
+//const byte RS485_MAX_LEN     = 20;    // buffer length to hold the longest possible RS485 message.  Just a guess.
+//      byte RS485MsgIncoming[RS485_MAX_LEN];  // No need to initialize contents
+//      byte RS485MsgOutgoing[RS485_MAX_LEN];
+//const byte RS485_LEN_OFFSET  =  0;    // first byte of message is always total message length in bytes
+//const byte RS485_TO_OFFSET   =  1;    // second byte of message is the ID of the Arduino the message is addressed to
+//const byte RS485_FROM_OFFSET =  2;    // third byte of message is the ID of the Arduino the message is coming from
 // Note also that the LAST byte of the message is a CRC8 checksum of all bytes except the last
-const byte RS485_TRANSMIT    = HIGH;  // HIGH = 0x1.  How to set TX_CONTROL pin when we want to transmit RS485
-const byte RS485_RECEIVE     = LOW;   // LOW = 0x0.  How to set TX_CONTROL pin when we want to receive (or NOT transmit) RS485
+//const byte RS485_TRANSMIT    = HIGH;  // HIGH = 0x1.  How to set TX_CONTROL pin when we want to transmit RS485
+//const byte RS485_RECEIVE     = LOW;   // LOW = 0x0.  How to set TX_CONTROL pin when we want to receive (or NOT transmit) RS485
 
 // *** SHIFT REGISTER: The following lines are required by the Centipede input/output shift registers.
 #include <Wire.h>                 // Needed for Centipede shift register
@@ -220,7 +225,7 @@ byte               FRAM1ControlBuf[FRAM_CONTROL_BUF_SIZE];
 unsigned int       FRAM1BufSize             =   0;  // We will retrieve this via a function call, but it better be 128!
 unsigned long      FRAM1Bottom              =   0;  // Should be 128 (address 0..127)
 unsigned long      FRAM1Top                 =   0;  // Highest address we can write to...should be 8191 (addresses are 0..8191 = 8192 bytes total)
-const byte         FRAM1VERSION[3]          = {  9, 16, 17 };  // This must match the version date stored in the FRAM1 control block.
+const byte         FRAM1VERSION[3]          = { 12, 02, 17 };  // This must match the version date stored in the FRAM1 control block.
 byte               FRAM1GotVersion[3]       = {  0,  0,  0 };  // This will hold the version retrieved from FRAM1, to confirm matches version above.
 const unsigned int FRAM1_ROUTE_START        = 128;  // Start writing FRAM1 Route Reference table data at this memory address, the lowest available address
 const byte         FRAM1_ROUTE_REC_LEN      =  77;  // Each element of the Route Reference table is 77 bytes long
@@ -231,11 +236,11 @@ const byte         FRAM1_ROUTE_REC_LEN      =  77;  // Each element of the Route
 #endif
 const byte         FRAM1_RECS_PER_ROUTE     =  11;  // Max number of block/turnout records in a single route in the route table.
 const unsigned int FRAM1_PARK1_START        = FRAM1_ROUTE_START + (FRAM1_ROUTE_REC_LEN * FRAM1_ROUTE_RECS);
-const byte         FRAM1_PARK1_REC_LEN      = 118;
+const byte         FRAM1_PARK1_REC_LEN      = 127;  // Was 118 until 12/3/17
 const byte         FRAM1_PARK1_RECS         =  19;
 const byte         FRAM1_RECS_PER_PARK1     =  21;  // Max number of block/turnout records in a single Park 1 route in the route table.
 const unsigned int FRAM1_PARK2_START        = FRAM1_PARK1_START + (FRAM1_PARK1_REC_LEN * FRAM1_PARK1_RECS);
-const byte         FRAM1_PARK2_REC_LEN      =  43;
+const byte         FRAM1_PARK2_REC_LEN      =  52;  // Was 43 until 12/3/17
 const byte         FRAM1_PARK2_RECS         =   4;
 const byte         FRAM1_RECS_PER_PARK2     =   6;  // Max number of block/turnout records in a single Park 2 route in the route table.
 Hackscribble_Ferro FRAM1(MB85RS64, PIN_FRAM1);   // Create the FRAM1 object!
@@ -308,33 +313,41 @@ byte totalTrainsReceived = 0;              // This keeps track of how many train
 // A-OCC needs route information to track reserved (and occupied) blocks when running in AUTO and PARK modes.
 
 struct routeReference {                 // Each element is 77 bytes, 26 or 70 records (single or double level)
-  byte routeNum;
-  char originSiding[5];
-  byte originTown;
-  char destSiding[5];
-  byte destTown;
-  byte maxTrainLen;                     // In inches, typically the destination siding length
-  char restrictions[6];                 // Possible future use
-  byte entrySensor;                     // Entry sensor number of the dest siding - where we start slowing down
-  byte exitSensor;                      // Exit sensor number of the dest siding - where we do a Stop Immediate
-  char route[FRAM1_RECS_PER_ROUTE][5];  // Blocks and Turnouts, up to FRAM1_RECS_PER_ROUTE per route, each with 4 chars (plus \0)
+  byte routeNum;                        // Redundant, but what the heck.
+  char originSiding[5];                 // 4 chars + null terminator = 5 bytes
+  byte originTown;                      // 1 byte
+  char destSiding[5];                   // 4 chars + null terminator = 5 bytes
+  byte destTown;                        // 1 byte
+  byte maxTrainLen;                     // In inches, typically the destination siding length.  1 byte
+  char restrictions[6];                 // Possible future use.  5 char + null terminator = 6 bytes
+  byte entrySensor;                     // Entry sensor number of the dest siding - where we start slowing down.  1 byte
+  byte exitSensor;                      // Exit sensor number of the dest siding - where we do a Stop Immediate.  1 byte
+  char route[FRAM1_RECS_PER_ROUTE][5];  // Blocks and Turnouts, up to FRAM1_RECS_PER_ROUTE per route, each with 4 chars (plus \0).  55 bytes
 };
 routeReference routeElement;            // Use this to hold individual elements when retrieved
 
-struct park1Reference {                 // Each element is 118 bytes, total of 19 records
-  byte routeNum;
-  char originSiding[5];
-  char destSiding[5];
+struct park1Reference {                 // Each element is 127 bytes, total of 19 records = 2413 bytes.
+  byte routeNum;                        // Redundant, but what the heck.
+  char originSiding[5];                 // 4 chars + null terminator = 5 bytes
+  byte originTown;                      // 1 byte
+  char destSiding[5];                   // 4 chars + null terminator = 5 bytes
+  byte destTown;                        // 1 byte
+  byte maxTrainLen;                     // In inches, typically the destination siding length.  1 byte
+  char restrictions[6];                 // Possible future use.  5 char + null terminator = 6 bytes
   byte entrySensor;                     // Entry sensor number of the dest siding - where we start slowing down
   byte exitSensor;                      // Exit sensor number of the dest siding - where we do a Stop Immediate
   char route[FRAM1_RECS_PER_PARK1][5];  // Blocks and Turnouts, up to FRAM1_RECS_PER_PARK1 per route, each with 4 chars (plus \0)
 };
 park1Reference park1Element;            // Use this to hold individual elements when retrieved
 
-struct park2Reference {                 // Each record 43 bytes long, total of just 4 records
-  byte routeNum;
-  char originSiding[5];
-  char destSiding[5];
+struct park2Reference {                 // Each record 52 bytes long, total of just 4 records = 208 bytes
+  byte routeNum;                        // Redundant, but what the heck.
+  char originSiding[5];                 // 4 chars + null terminator = 5 bytes
+  byte originTown;                      // 1 byte
+  char destSiding[5];                   // 4 chars + null terminator = 5 bytes
+  byte destTown;                        // 1 byte
+  byte maxTrainLen;                     // In inches, typically the destination siding length.  1 byte
+  char restrictions[6];                 // Possible future use.  5 char + null terminator = 6 bytes
   byte entrySensor;                     // Entry sensor number of the dest siding - where we start slowing down
   byte exitSensor;                      // Exit sensor number of the dest siding - where we do a Stop Immediate
   char route[FRAM1_RECS_PER_PARK2][5];  // Blocks and Turnouts, up to FRAM1_RECS_PER_PARK2 per route, each with 4 chars (plus \0)
@@ -1961,6 +1974,7 @@ bool RS485GetMessage(byte tMsg[]) {
   // tmsg[] is also "returned" by the function since arrays are passed by reference.
   // If this function returns true, then we are guaranteed to have a real/accurate message in the
   // buffer, including good CRC.  However, the function does not check if it is to "us" (this Arduino) or not.
+
   byte tMsgLen = Serial2.peek();     // First byte will be message length
   byte tBufLen = Serial2.available();  // How many bytes are waiting?  Size is 64.
   if (tBufLen >= tMsgLen) {  // We have at least enough bytes for a complete incoming message
@@ -2135,6 +2149,8 @@ void sendToLCD(const char nextLine[]) {
 
 void endWithFlashingLED(int numFlashes) {
   // Rev 10/05/16: Version for Arduinos WITHOUT relays that should be released.
+
+
   requestEmergencyStop();
   while (true) {
     for (int i = 1; i <= numFlashes; i++) {

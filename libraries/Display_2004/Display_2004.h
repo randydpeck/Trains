@@ -5,7 +5,8 @@
 #define _DISPLAY_2004_H
 
 #include "Arduino.h"
-#include <Train_Fns_Vars_Global.h>
+#include <Train_Consts_Global.h>
+//#include <Train_Fns_Vars_Global.h>
 
 // The following lines are required by the Digole serial LCD display, connected to serial port 1.
 // The Digole LCD is an object that is used by our primary 20x04 LCD object "Display_2004."
@@ -16,7 +17,6 @@ class Display_2004
 {
   public:
 
-    // Constructor declaration, note this does not specify a return type.
     // Display_2004() constructor creates a new object of the type specified in the call.
     // hdwrSerial needs to be &Serial, &Serial1, &Serial2, or &Serial3 i.e. the address of the serial interface.
     // baud needs to be a valid baud rate, typically 9600 or 115200.
@@ -40,6 +40,7 @@ class Display_2004
 };
 
 // extern Display_2004 Display_2004();  // What does this do???  Visual Studio added it as part of the default "new class" setup
+extern void endWithFlashingLED(int numFlashes);
 
 #endif
 

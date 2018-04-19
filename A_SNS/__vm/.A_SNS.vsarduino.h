@@ -14,7 +14,7 @@
 #define _VSARDUINO_H_
 #define __AVR_ATmega2560__
 #define F_CPU 16000000L
-#define ARDUINO 10801
+#define ARDUINO 106013
 #define ARDUINO_AVR_MEGA2560
 #define ARDUINO_ARCH_AVR
 #define __cplusplus 201103L
@@ -61,13 +61,15 @@ typedef void *__builtin_va_list;
 
 
 
-#include <Arduino.h>
+#include <arduino.h>
 #include <pins_arduino.h> 
-#undef F
-#define F(string_literal) ((const PROGMEM char *)(string_literal))
+//#undef F
+//#define F(string_literal) ((const PROGMEM char *)(string_literal))
 #undef PSTR
 #define PSTR(string_literal) ((const PROGMEM char *)(string_literal))
 
+//typedef unsigned char uint8_t;
+//typedef unsigned int uint8_t;
 
 #define pgm_read_byte(address_short) uint8_t() 
 #define pgm_read_word(address_short) uint16_t() 

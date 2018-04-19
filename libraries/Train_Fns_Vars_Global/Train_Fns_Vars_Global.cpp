@@ -3,15 +3,25 @@
 
 #include <Train_Fns_Vars_Global.h>
 
-char lcdString[21];                   // Global array to hold strings sent to Digole 2004 LCD; last char is for null terminator.
+// Pass address of serial port to use (0..3) such as &Serial1, and baud rate such as 9600 or 115200.
+//Display_2004 LCD2004(&Serial1, 115200);  // Instantiate 2004 LCD display "LCD2004."
+//Display_2004 * ptrLCD2004;               // Pointer will be passed to any other classes that need to be able to write to the LCD display.
 
 
+//byte RS485MsgIncoming[RS485_MAX_LEN];  // No need to initialize contents
+//byte RS485MsgOutgoing[RS485_MAX_LEN];
 
-// IMPORTANT: THIS IS A DIFFERENT VERSION THAN MOST MODULES DUE TO THE INIT SHIFT REGISTER, so I'll need to figure out how to deal with that.
+//char lcdString[LCD_WIDTH + 1];                   // Global array to hold strings sent to Digole 2004 LCD; last char is for null terminator.
+
+
+/*  Each module needs its own version since LEG and SWT need to init shift registers, which are not objects in some other modules
 void endWithFlashingLED(int numFlashes) {
-  // Rev 10/05/16: Version for Arduinos WITH relays that should be released (A-SWT turnouts, A-LEG accessories)
-  initializeShiftRegisterPins();  // Release all relay coils that might be activating turnout solenoids
-  requestEmergencyStop();
+  if (THIS_MODULE == ARDUINO_LEG) {
+    requestEmergencyStop();  // Stop all Legacy devices esp. locomotives that might be moving
+  }
+  if ((THIS_MODULE == ARDUINO_LEG) || (THIS_MODULE == ARDUINO_SWT)) {
+    initializeShiftRegisterPins();  // Release relays holding accessories or turnout coils
+  }
   while (true) {
     for (int i = 1; i <= numFlashes; i++) {
       digitalWrite(PIN_LED, HIGH);
@@ -41,3 +51,4 @@ void requestEmergencyStop() {
   pinMode(PIN_HALT, INPUT);
   return;
 }
+*/

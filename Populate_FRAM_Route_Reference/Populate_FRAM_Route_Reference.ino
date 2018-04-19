@@ -1,10 +1,10 @@
-// POPULATE FRAM 1 Rev: 10/01/17.
+// POPULATE FRAM 1 Rev: 12/03/17.
 
 // Include the following #define if we want to run the system with just the lower-level track.  Comment out to create records for both levels of track.
-#define SINGLE_LEVEL     // Comment this out for full double-level routes.  Use it for single-level route testing.
+//#define SINGLE_LEVEL     // Comment this out for full double-level routes.  Use it for single-level route testing.
 
-byte FRAM1Version[3] = { 9, 16, 17 };  // Date will be placed in FRAM1 control block as the first three bytes
-byte FRAM2Version[3] = { 9, 16, 17 };  // Date will be placed in FRAM1 control block as the first three bytes
+byte FRAM1Version[3] = {12, 03, 17 };  // Date will be placed in FRAM1 control block as the first three bytes
+byte FRAM2Version[3] = { 9, 16, 17 };  // Date will be placed in FRAM2 control block as the first three bytes
 
 // Arduino memory overflow if we try to populate all three tables at once, so split the code into two parts.
 // ONE of the following TWO #define statements must be commented out, and the other must be included:
@@ -16,6 +16,10 @@ byte FRAM2Version[3] = { 9, 16, 17 };  // Date will be placed in FRAM1 control b
 // Can be compiled to populate Route Reference, or Park 1 and Park 2 Reference.
 // Be sure to comment in or out, the COMPILE_ROUTE, COMPILE_PARK, and/or SINGLE_LEVEL define statements as appropriate.
 
+// 12/03/17: Added Orig Town, Dest Town, Max Train Len, and Route Restrictions to Park 1 and Park 2 tables.  
+//           8K FRAM: Total used 8139 bytes of 8192 capacity.
+//           If we run out of FRAM in the future, due to a larger layout or even one more route, we can simply store the two
+//           park routes on a separate FRAM.  No big deal since they stack; just need one more wire from Arduino for chip select.
 // 09/17/17: Moved 1st-level reversing routes to end of routes from respective origin sidings, so reversing from CCW to CW will be minimized.
 //           When operating in single-level mode, once you start traveling CW, you CANNOT get back to moving CCW on any route.
 //           There also seemed to be some missing route options, added several to single-level route table.
@@ -85,10 +89,10 @@ const byte         FRAM1_ROUTE_REC_LEN      =  77;  // Each element of the Route
   const byte       FRAM1_ROUTE_RECS         =  70;  // Number of records in the basic Route Reference table, not including "reverse" routes
 #endif
 const unsigned int FRAM1_PARK1_START        = FRAM1_ROUTE_START + (FRAM1_ROUTE_REC_LEN * FRAM1_ROUTE_RECS);
-const byte         FRAM1_PARK1_REC_LEN      = 118;
+const byte         FRAM1_PARK1_REC_LEN      = 127;  // Was 118 until 12/3/17
 const byte         FRAM1_PARK1_RECS         =  19;
 const unsigned int FRAM1_PARK2_START        = FRAM1_PARK1_START + (FRAM1_PARK1_REC_LEN * FRAM1_PARK1_RECS);
-const byte         FRAM1_PARK2_REC_LEN      =  43;
+const byte         FRAM1_PARK2_REC_LEN      =  52;  // Was 43 until 12/3/17
 const byte         FRAM1_PARK2_RECS         =   4;
 Hackscribble_Ferro FRAM1(MB85RS64, PIN_FRAM1);   // Create the FRAM1 object!
 // FRAM2 control block (first 128 bytes) contains no data - we don't need a version number because we don't have any initial data to read.
@@ -118,38 +122,68 @@ unsigned int FRAM2TopRec = 0;          // This will keep track of the highest re
 // A-LED needs route information for when it sees commands to set all turnouts for a given route (regular, park1, or park2.)
 // Other times, A-LED will simply see a command to set an individual turnout to either Normal or Reverse, or a bit string.
 
-struct routeReference {  // Each element is 77 bytes
-  byte routeNum;
-  char originSiding[5];  // 4 chars + null terminator
-  byte originTown;
-  char destSiding[5];    // 4 chars + null terminator
-  byte destTown;
-  byte maxTrainLen;   // In inches
-  char restrictions[6];  // Possible future use.  5 char + null terminator
-  byte entrySensor;      // Entry sensor number of the dest siding - where we start slowing down
-  byte exitSensor;       // Exit sensor number of the dest siding - where we do a Stop Immediate
-  char route[11][5];     // Blocks and Turnouts, up to 11 per route. 0 thru 10, each with 4 chars (plus \n)
+struct routeReference {  // Each element is 77 bytes.  70 routes = 5390 bytes.  32 routes = 2464 bytes.
+  byte routeNum;         // Redundant but what the heck.  1 byte
+  char originSiding[5];  // 4 chars + null terminator = 5 bytes
+  byte originTown;       // 1 byte
+  char destSiding[5];    // 4 chars + null terminator = 5 bytes
+  byte destTown;         // 1 byte
+  byte maxTrainLen;      // In inches.  1 byte
+  char restrictions[6];  // Possible future use.  5 char + null terminator = 6 bytes
+  byte entrySensor;      // Entry sensor number of the dest siding - where we start slowing down.  1 byte
+  byte exitSensor;       // Exit sensor number of the dest siding - where we do a Stop Immediate.  1 byte
+  char route[11][5];     // Blocks and Turnouts, up to 11 per route. 0 thru 10, each with 4 chars (plus \n).  55 bytes
 };
 routeReference routeElement;  // Use this to hold individual elements when retrieved
 
-struct park1Reference {  // Each element is 118 bytes, total of 19 records
-  byte routeNum;
-  char originSiding[5];  // 4 chars + null terminator
-  char destSiding[5];    // 4 chars + null terminator
-  byte entrySensor;      // Entry sensor number of the dest siding - where we start slowing down
-  byte exitSensor;       // Exit sensor number of the dest siding - where we do a Stop Immediate
-  char route[21][5];     // Blocks and Turnouts, up to 21 per route. 0 thru 20, each with 4 chars (plus \n)
+struct park1Reference {  // Each element is 127 bytes, total of 19 records = 2413 bytes.
+  byte routeNum;         // Redundant but what the heck.  1 byte
+  char originSiding[5];  // 4 chars + null terminator = 5 bytes
+  byte originTown;       // 1 byte
+  char destSiding[5];    // 4 chars + null terminator = 5 bytes
+  byte destTown;         // 1 byte
+  byte maxTrainLen;      // In inches.  1 byte
+  char restrictions[6];  // Possible future use.  5 char + null terminator = 6 bytes
+  byte entrySensor;      // Entry sensor number of the dest siding - where we start slowing down.  1 byte
+  byte exitSensor;       // Exit sensor number of the dest siding - where we do a Stop Immediate.  1 byte
+  char route[21][5];     // Blocks and Turnouts, up to 21 per route. 0 thru 20, each with 4 chars (plus \n).  105 bytes
 };
+
+// Old version updated 12/2/17 to add originTown, destTown, maxTrainLen, and restrictions
+// struct park1Reference {  // Each element is 118 bytes, total of 19 records = 2242 bytes.
+//   byte routeNum;         // Redundant but what the heck.  1 byte
+//   char originSiding[5];  // 4 chars + null terminator = 5 bytes
+//   char destSiding[5];    // 4 chars + null terminator = 5 bytes
+//   byte entrySensor;      // Entry sensor number of the dest siding - where we start slowing down.  1 byte
+//   byte exitSensor;       // Exit sensor number of the dest siding - where we do a Stop Immediate.  1 byte
+//   char route[21][5];     // Blocks and Turnouts, up to 21 per route. 0 thru 20, each with 4 chars (plus \n).  105 bytes
+// };
+
 park1Reference park1Element;  // Use this to hold individual elements when retrieved
 
-struct park2Reference {  // Each record 43 bytes long, total of just 4 records
-  byte routeNum;
-  char originSiding[5];  // 4 chars + null terminator
-  char destSiding[5];    // 4 chars + null terminator
-  byte entrySensor;      // Entry sensor number of the dest siding - where we start slowing down
-  byte exitSensor;       // Exit sensor number of the dest siding - where we do a Stop Immediate
-  char route[6][5];      // Blocks and Turnouts
+struct park2Reference {  // Each record 52 bytes long, total of just 4 records = 208 bytes
+  byte routeNum;         // Redundant but what the heck.  1 byte
+  char originSiding[5];  // 4 chars + null terminator = 5 bytes
+  byte originTown;       // 1 byte
+  char destSiding[5];    // 4 chars + null terminator = 5 bytes
+  byte destTown;         // 1 byte
+  byte maxTrainLen;      // In inches.  1 byte
+  char restrictions[6];  // Possible future use.  5 char + null terminator = 6 bytes
+  byte entrySensor;      // Entry sensor number of the dest siding - where we start slowing down.  1 byte
+  byte exitSensor;       // Exit sensor number of the dest siding - where we do a Stop Immediate.  1 byte
+  char route[6][5];      // Blocks and Turnouts, up to 6 per route.  0 thru 5, with 4 chars (plus \n).  30 bytes.
 };
+
+// Old version updated 12/2/17 to add originTown, destTown, maxTrainLen, and restrictions
+// struct park2Reference {  // Each record 43 bytes long, total of just 4 records = 172 bytes
+//   byte routeNum;         // Redundant but what the heck.  1 byte
+//   char originSiding[5];  // 4 chars + null terminator = 5 bytes
+//   char destSiding[5];    // 4 chars + null terminator = 5 bytes
+//   byte entrySensor;      // Entry sensor number of the dest siding - where we start slowing down.  1 byte
+//   byte exitSensor;       // Exit sensor number of the dest siding - where we do a Stop Immediate.  1 byte
+//   char route[6][5];      // Blocks and Turnouts, up to 6 per route.  0 thru 5, with 4 chars (plus \n).  30 bytes.
+// };
+
 park2Reference park2Element;  // Use this to hold individual elements when retrieved
 
 #ifdef COMPILE_ROUTE
@@ -279,33 +313,33 @@ park2Reference park2Element;  // Use this to hold individual elements when retri
 
   park1Reference park1Array[FRAM1_PARK1_RECS] = {
 
-    { 1,"B02W","B17E",45,46,"T03N","T02N","B09W","T23N","T24N","T25N","T26R","T28N","B17E","    ","    ","    ","    ","    ","    ","    ","    ","    ","    ","    ","    "},
-    { 2,"B03W","B17E",45,46,"T05N","T04N","B10W","T27N","T28R","B17E","    ","    ","    ","    ","    ","    ","    ","    ","    ","    ","    ","    ","    ","    ","    "},
-    { 3,"B04W","B17E",45,46,"T04R","B10W","T27N","T28R","B17E","    ","    ","    ","    ","    ","    ","    ","    ","    ","    ","    ","    ","    ","    ","    ","    "},
-    { 4,"B02E","B17E",45,46,"T08N","T07N","B07W","T15N","T09R","B04W","T04R","B10W","T27N","T28R","B17E","    ","    ","    ","    ","    ","    ","    ","    ","    ","    "},
-    { 5,"B03E","B17E",45,46,"T08R","T07N","B07W","T15N","T09R","B04W","T04R","B10W","T27N","T28R","B17E","    ","    ","    ","    ","    ","    ","    ","    ","    ","    "},
-    { 6,"B04E","B17E",45,46,"T15N","B07E","T07N","T08N","B02W","T03N","T02N","B09W","T23N","T24N","T25N","T26R","T28N","B17E","    ","    ","    ","    ","    ","    ","    "},
-    { 7,"B04E","B17E",45,46,"T15N","B07E","T07N","T08R","B03W","T05N","T04N","B10W","T27N","T28R","B17E","    ","    ","    ","    ","    ","    ","    ","    ","    ","    "},
-    { 8,"B13E","B17E",45,46,"T21N","B21W","T06R","T07R","T08R","B03W","T05N","T04N","B10W","T27N","T28R","B17E","    ","    ","    ","    ","    ","    ","    ","    ","    "},
-    { 9,"B13W","B17E",45,46,"T16N","B08E","T01R","T03R","B02E","T08N","T07N","B07W","T15N","T09R","B04W","T04R","B10W","T27N","T28R","B17E","    ","    ","    ","    ","    "},
-    {10,"B01E","B17E",45,46,"T06N","B21E","T21N","B13W","T16N","B08E","T01R","T03R","B02E","T08N","T07N","B07W","T15N","T09R","B04W","T04R","B10W","T27N","T28R","B17E","    "},
-    {11,"B01W","B17E",45,46,"T01N","B08W","T16N","B13E","T21N","B21W","T06R","T07R","T08R","B03W","T05N","T04N","B10W","T27N","T28R","B17E","    ","    ","    ","    ","    "},
-    {12,"B05E","B17E",45,46,"T14N","T15R","B07E","T07N","T08R","B03W","T05N","T04N","B10W","T27N","T28R","B17E","    ","    ","    ","    ","    ","    ","    ","    ","    "},
-    {13,"B06E","B17E",45,46,"T14R","T15R","B07E","T07N","T08R","B03W","T05N","T04N","B10W","T27N","T28R","B17E","    ","    ","    ","    ","    ","    ","    ","    ","    "},
-    {14,"B14E","B17E",45,46,"T20R","B16E","T21R","B21W","T06R","T07R","T08R","B03W","T05N","T04N","B10W","T27N","T28R","B17E","    ","    ","    ","    ","    ","    ","    "},
-    {15,"B15E","B17E",45,46,"T20N","B16E","T21R","B21W","T06R","T07R","T08R","B03W","T05N","T04N","B10W","T27N","T28R","B17E","    ","    ","    ","    ","    ","    ","    "},
-    {16,"B14W","B17E",45,46,"T18R","T17N","B12W","T16R","B08E","T01R","T03R","B02E","T08N","T07N","B07W","T15N","T09R","B04W","T04R","B10W","T27N","T28R","B17E","    ","    "},
-    {17,"B15W","B17E",45,46,"T17R","B12W","T16R","B08E","T01R","T03R","B02E","T08N","T07N","B07W","T15N","T09R","B04W","T04R","B10W","T27N","T28R","B17E","    ","    ","    "},
-    {18,"B05W","B17E",45,46,"T12R","T11R","B11W","T18N","T19N","B14E","T20R","B16E","T21R","B21W","T06R","T07R","T08R","B03W","T05N","T04N","B10W","T27N","T28R","B17E","    "},
-    {19,"B06W","B17E",45,46,"T13R","T12N","T11R","B11W","T18N","T19N","B14E","T20R","B16E","T21R","B21W","T06R","T07R","T08R","B03W","T05N","T04N","B10W","T27N","T28R","B17E"}
+    { 1,"B02W",1,"B17E",7,0,"     ",45,46,"T03N","T02N","B09W","T23N","T24N","T25N","T26R","T28N","B17E","    ","    ","    ","    ","    ","    ","    ","    ","    ","    ","    ","    "},
+    { 2,"B03W",1,"B17E",7,0,"     ",45,46,"T05N","T04N","B10W","T27N","T28R","B17E","    ","    ","    ","    ","    ","    ","    ","    ","    ","    ","    ","    ","    ","    ","    "},
+    { 3,"B04W",1,"B17E",7,0,"     ",45,46,"T04R","B10W","T27N","T28R","B17E","    ","    ","    ","    ","    ","    ","    ","    ","    ","    ","    ","    ","    ","    ","    ","    "},
+    { 4,"B02E",1,"B17E",7,0,"     ",45,46,"T08N","T07N","B07W","T15N","T09R","B04W","T04R","B10W","T27N","T28R","B17E","    ","    ","    ","    ","    ","    ","    ","    ","    ","    "},
+    { 5,"B03E",1,"B17E",7,0,"     ",45,46,"T08R","T07N","B07W","T15N","T09R","B04W","T04R","B10W","T27N","T28R","B17E","    ","    ","    ","    ","    ","    ","    ","    ","    ","    "},
+    { 6,"B04E",1,"B17E",7,0,"     ",45,46,"T15N","B07E","T07N","T08N","B02W","T03N","T02N","B09W","T23N","T24N","T25N","T26R","T28N","B17E","    ","    ","    ","    ","    ","    ","    "},
+    { 7,"B04E",1,"B17E",7,0,"     ",45,46,"T15N","B07E","T07N","T08R","B03W","T05N","T04N","B10W","T27N","T28R","B17E","    ","    ","    ","    ","    ","    ","    ","    ","    ","    "},
+    { 8,"B13E",3,"B17E",7,0,"     ",45,46,"T21N","B21W","T06R","T07R","T08R","B03W","T05N","T04N","B10W","T27N","T28R","B17E","    ","    ","    ","    ","    ","    ","    ","    ","    "},
+    { 9,"B13W",3,"B17E",7,0,"     ",45,46,"T16N","B08E","T01R","T03R","B02E","T08N","T07N","B07W","T15N","T09R","B04W","T04R","B10W","T27N","T28R","B17E","    ","    ","    ","    ","    "},
+    {10,"B01E",1,"B17E",7,0,"     ",45,46,"T06N","B21E","T21N","B13W","T16N","B08E","T01R","T03R","B02E","T08N","T07N","B07W","T15N","T09R","B04W","T04R","B10W","T27N","T28R","B17E","    "},
+    {11,"B01W",1,"B17E",7,0,"     ",45,46,"T01N","B08W","T16N","B13E","T21N","B21W","T06R","T07R","T08R","B03W","T05N","T04N","B10W","T27N","T28R","B17E","    ","    ","    ","    ","    "},
+    {12,"B05E",2,"B17E",7,0,"     ",45,46,"T14N","T15R","B07E","T07N","T08R","B03W","T05N","T04N","B10W","T27N","T28R","B17E","    ","    ","    ","    ","    ","    ","    ","    ","    "},
+    {13,"B06E",2,"B17E",7,0,"     ",45,46,"T14R","T15R","B07E","T07N","T08R","B03W","T05N","T04N","B10W","T27N","T28R","B17E","    ","    ","    ","    ","    ","    ","    ","    ","    "},
+    {14,"B14E",4,"B17E",7,0,"     ",45,46,"T20R","B16E","T21R","B21W","T06R","T07R","T08R","B03W","T05N","T04N","B10W","T27N","T28R","B17E","    ","    ","    ","    ","    ","    ","    "},
+    {15,"B15E",4,"B17E",7,0,"     ",45,46,"T20N","B16E","T21R","B21W","T06R","T07R","T08R","B03W","T05N","T04N","B10W","T27N","T28R","B17E","    ","    ","    ","    ","    ","    ","    "},
+    {16,"B14W",4,"B17E",7,0,"     ",45,46,"T18R","T17N","B12W","T16R","B08E","T01R","T03R","B02E","T08N","T07N","B07W","T15N","T09R","B04W","T04R","B10W","T27N","T28R","B17E","    ","    "},
+    {17,"B15W",4,"B17E",7,0,"     ",45,46,"T17R","B12W","T16R","B08E","T01R","T03R","B02E","T08N","T07N","B07W","T15N","T09R","B04W","T04R","B10W","T27N","T28R","B17E","    ","    ","    "},
+    {18,"B05W",2,"B17E",7,0,"     ",45,46,"T12R","T11R","B11W","T18N","T19N","B14E","T20R","B16E","T21R","B21W","T06R","T07R","T08R","B03W","T05N","T04N","B10W","T27N","T28R","B17E","    "},
+    {19,"B06W",2,"B17E",7,0,"     ",45,46,"T13R","T12N","T11R","B11W","T18N","T19N","B14E","T20R","B16E","T21R","B21W","T06R","T07R","T08R","B03W","T05N","T04N","B10W","T27N","T28R","B17E"}
   };
 
   park2Reference park2Array[FRAM1_PARK2_RECS] = {
 
-    { 1, "B17E", "B23E", 24, 23, "T28N", "T26R", "T25N", "T24N", "T23R", "B23E"},
-    { 2, "B17E", "B24E", 26, 25, "T28N", "T26R", "T25N", "T24R", "B24E", "    "},
-    { 3, "B17E", "B25E", 28, 27, "T28N", "T26R", "T25R", "B25E", "    ", "    "},
-    { 4, "B17E", "B26E", 30, 29, "T28N", "T26N", "B26E", "    ", "    ", "    "}
+    { 1,"B17E",7,"B23E",6,0,"     ",24,23,"T28N","T26R","T25N","T24N","T23R","B23E"},
+    { 2,"B17E",7,"B24E",6,0,"     ",26,25,"T28N","T26R","T25N","T24R","B24E","    "},
+    { 3,"B17E",7,"B25E",6,0,"     ",28,27,"T28N","T26R","T25R","B25E","    ","    "},
+    { 4,"B17E",7,"B26E",6,0,"     ",30,29,"T28N","T26N","B26E","    ","    ","    "}
   };
 
 #endif   // COMPILE_PARK
@@ -339,9 +373,9 @@ void setup() {
   Serial.println("******************");
   Serial.println();
 
-  Serial.print("Size of route element (should be  77): "); Serial.println(sizeof(routeElement));   // Should be 77 bytes
-  Serial.print("Size of park1 element (should be 118): "); Serial.println(sizeof(park1Element));   // Should be 118 bytes
-  Serial.print("Size of park2 element (should be  43): "); Serial.println(sizeof(park2Element));   // Should be 43 bytes
+  Serial.print("Size of route element (should be  77): "); Serial.println(sizeof(routeElement));
+  Serial.print("Size of park1 element (should be 127): "); Serial.println(sizeof(park1Element));
+  Serial.print("Size of park2 element (should be  52): "); Serial.println(sizeof(park2Element));
   Serial.print("FRAM1 top address written (must not be > 8191): "); Serial.println(FRAM1_TOP_ADDRESS);
 
   // Hackscribble_Ferro library uses standard Arduino SPI pin definitions:  MOSI, MISO, SCK.
@@ -475,27 +509,27 @@ void setup() {
   Serial.println("Now write the both Park tables to FRAM1.");
   Serial.print("FRAM Park 1 start address (should be 2592 or 5518): ");
   Serial.println(FRAM1_PARK1_START);
-  Serial.print("FRAM Park 1 table record length (should be 118): ");
+  Serial.print("FRAM Park 1 table record length (should be 127): ");
   Serial.println(FRAM1_PARK1_REC_LEN);
   Serial.print("FRAM Park 1 table records (should be 19): ");
   Serial.println(FRAM1_PARK1_RECS);
-  Serial.print("Size of park1Element (should be 118): ");
+  Serial.print("Size of park1Element (should be 127): ");
   Serial.println(sizeof(park1Element));
-  Serial.print("Size of park1Array[] (should be 2242): ");
+  Serial.print("Size of park1Array[] (should be 2413): ");
   Serial.println(sizeof(park1Array));
 
-  Serial.print("FRAM Park 2 start address (should be 4834 or 7760): ");
+  Serial.print("FRAM Park 2 start address (should be 5005 or 7931): ");
   Serial.println(FRAM1_PARK2_START);
-  Serial.print("FRAM Park 2 table record length (should be 43): ");
+  Serial.print("FRAM Park 2 table record length (should be 52): ");
   Serial.println(FRAM1_PARK2_REC_LEN);
   Serial.print("FRAM Park 2 table records (should be 4): ");
   Serial.println(FRAM1_PARK2_RECS);
-  Serial.print("Size of park2Element (should be 43): ");
+  Serial.print("Size of park2Element (should be 52): ");
   Serial.println(sizeof(park2Element));
-  Serial.print("Size of park2Array[] (should be 172): ");
+  Serial.print("Size of park2Array[] (should be 208): ");
   Serial.println(sizeof(park2Array));
 
-  Serial.print("Top address used must be less than 8192! (should be 5005 or 7931): ");
+  Serial.print("Top address used must be less than 8192! (should be 5212 or 8138): ");
   unsigned int x = FRAM1_PARK2_START + (FRAM1_PARK2_REC_LEN * FRAM1_PARK2_RECS) - 1;
   Serial.println(x);
 
@@ -542,9 +576,9 @@ void setup() {
     Serial.print(routeElement.maxTrainLen); Serial.print("', '");
     Serial.print(routeElement.restrictions); Serial.print("', '");
     Serial.print(routeElement.entrySensor); Serial.print("', '");
-    Serial.print(routeElement.exitSensor); Serial.print("', '");
+    Serial.print(routeElement.exitSensor); Serial.print("'");
     for (byte i = 0; i < 11; i++) {
-      Serial.print(routeElement.route[i]); Serial.print("', '");
+      Serial.print(", '"); Serial.print(routeElement.route[i]); Serial.print("'");
     }
     Serial.println();
   }
@@ -559,11 +593,15 @@ void setup() {
     Serial.print(FRAMAddress); Serial.print(": ");
     Serial.print(park1Element.routeNum); Serial.print(", '");
     Serial.print(park1Element.originSiding); Serial.print("', '");
+    Serial.print(park1Element.originTown); Serial.print("', '");
     Serial.print(park1Element.destSiding); Serial.print("', '");
+    Serial.print(park1Element.destTown); Serial.print("', '");
+    Serial.print(park1Element.maxTrainLen); Serial.print("', '");
+    Serial.print(park1Element.restrictions); Serial.print("', '");
     Serial.print(park1Element.entrySensor); Serial.print("', '");
-    Serial.print(park1Element.exitSensor); Serial.print("', '");
+    Serial.print(park1Element.exitSensor); Serial.print("'");
     for (byte i = 0; i < 21; i++) {
-      Serial.print(park1Element.route[i]); Serial.print("', '");
+      Serial.print(", '"); Serial.print(park1Element.route[i]); Serial.print("'");
     }
     Serial.println();
   }
@@ -578,11 +616,15 @@ void setup() {
     Serial.print(FRAMAddress); Serial.print(": ");
     Serial.print(park2Element.routeNum); Serial.print(", '");
     Serial.print(park2Element.originSiding); Serial.print("', '");
+    Serial.print(park2Element.originTown); Serial.print("', '");
     Serial.print(park2Element.destSiding); Serial.print("', '");
+    Serial.print(park2Element.destTown); Serial.print("', '");
+    Serial.print(park2Element.maxTrainLen); Serial.print("', '");
+    Serial.print(park2Element.restrictions); Serial.print("', '");
     Serial.print(park2Element.entrySensor); Serial.print("', '");
-    Serial.print(park2Element.exitSensor); Serial.print("', '");
+    Serial.print(park2Element.exitSensor); Serial.print("'");
     for (byte i = 0; i < 6; i++) {
-      Serial.print(park2Element.route[i]); Serial.print("', '");
+      Serial.print(", '"); Serial.print(park2Element.route[i]); Serial.print("'");
     }
     Serial.println();
   }

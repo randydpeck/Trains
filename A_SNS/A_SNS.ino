@@ -76,27 +76,32 @@ char APPVERSION[21] = "A-SNS Rev. 10/01/17";
 // **************************************************************************************************************************
 
 #include <Train_Consts_Global.h>
+const byte THIS_MODULE = ARDUINO_BTN;  // Not sure if/where I will use this - intended if I call a common function but will this "global" be seen there?
+byte RS485MsgIncoming[RS485_MAX_LEN];  // No need to initialize contents
+byte RS485MsgOutgoing[RS485_MAX_LEN];
+
+char lcdString[LCD_WIDTH + 1];                   // Global array to hold strings sent to Digole 2004 LCD; last char is for null terminator.
 
 // *** SERIAL LCD DISPLAY: The following lines are required by the Digole serial LCD display, connected to serial port 1.
-const byte LCD_WIDTH = 20;        // Number of chars wide on the 20x04 LCD displays on the control panel
+//const byte LCD_WIDTH = 20;        // Number of chars wide on the 20x04 LCD displays on the control panel
 #define _Digole_Serial_UART_      // To tell compiler compile the serial communication only
 #include <DigoleSerial.h>
 DigoleSerialDisp LCDDisplay(&Serial1, 115200); //UART TX on arduino to RX on module
-char lcdString[LCD_WIDTH + 1];    // Global array to hold strings sent to Digole 2004 LCD; last char is for null terminator.
+//char lcdString[LCD_WIDTH + 1];    // Global array to hold strings sent to Digole 2004 LCD; last char is for null terminator.
 
 // *** RS485 MESSAGES: Here are constants and arrays related to the RS485 messages
 // Note that the serial input buffer is only 64 bytes, which means that we need to keep emptying it since there
 // will be many commands between Arduinos, even though most may not be for THIS Arduino.  If the buffer overflows,
 // then we will be totally screwed up (but it will be apparent in the checksum.)
-const byte RS485_MAX_LEN     = 20;    // buffer length to hold the longest possible RS485 message.  Just a guess.
-      byte RS485MsgIncoming[RS485_MAX_LEN];  // No need to initialize contents
-      byte RS485MsgOutgoing[RS485_MAX_LEN];
-const byte RS485_LEN_OFFSET  =  0;    // first byte of message is always total message length in bytes
-const byte RS485_TO_OFFSET   =  1;    // second byte of message is the ID of the Arduino the message is addressed to
-const byte RS485_FROM_OFFSET =  2;    // third byte of message is the ID of the Arduino the message is coming from
+// const byte RS485_MAX_LEN     = 20;    // buffer length to hold the longest possible RS485 message.  Just a guess.
+//       byte RS485MsgIncoming[RS485_MAX_LEN];  // No need to initialize contents
+//       byte RS485MsgOutgoing[RS485_MAX_LEN];
+// const byte RS485_LEN_OFFSET  =  0;    // first byte of message is always total message length in bytes
+// const byte RS485_TO_OFFSET   =  1;    // second byte of message is the ID of the Arduino the message is addressed to
+// const byte RS485_FROM_OFFSET =  2;    // third byte of message is the ID of the Arduino the message is coming from
 // Note also that the LAST byte of the message is a CRC8 checksum of all bytes except the last
-const byte RS485_TRANSMIT    = HIGH;  // HIGH = 0x1.  How to set TX_CONTROL pin when we want to transmit RS485
-const byte RS485_RECEIVE     = LOW;   // LOW = 0x0.  How to set TX_CONTROL pin when we want to receive (or NOT transmit) RS485
+// const byte RS485_TRANSMIT    = HIGH;  // HIGH = 0x1.  How to set TX_CONTROL pin when we want to transmit RS485
+// const byte RS485_RECEIVE     = LOW;   // LOW = 0x0.  How to set TX_CONTROL pin when we want to receive (or NOT transmit) RS485
 
 // *** SHIFT REGISTER: The following lines are required by the Centipede input/output shift registers.
 #include <Wire.h>                 // Needed for Centipede shift register
@@ -320,6 +325,7 @@ bool RS485GetMessage(byte tMsg[]) {
   // tmsg[] is also "returned" by the function since arrays are passed by reference.
   // If this function returns true, then we are guaranteed to have a real/accurate message in the
   // buffer, including good CRC.  However, the function does not check if it is to "us" (this Arduino) or not.
+
   byte tMsgLen = Serial2.peek();     // First byte will be message length
   byte tBufLen = Serial2.available();  // How many bytes are waiting?  Size is 64.
   if (tBufLen >= tMsgLen) {  // We have at least enough bytes for a complete incoming message
@@ -445,6 +451,8 @@ void sendToLCD(const char nextLine[]) {
 
 void endWithFlashingLED(int numFlashes) {
   // Rev 10/05/16: Version for Arduinos WITHOUT relays that should be released.
+
+
   requestEmergencyStop();
   while (true) {
     for (int i = 1; i <= numFlashes; i++) {

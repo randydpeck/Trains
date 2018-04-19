@@ -1,5 +1,5 @@
-// A_SWT Rev: 10/20/17.
-char APPVERSION[21] = "A-SWT Rev. 11/04/17";
+// A_SWT Rev: 12/03/17.
+char APPVERSION[21] = "A-SWT Rev. 12/03/17";
 
 // Include the following #define if we want to run the system with just the lower-level track.
 #define SINGLE_LEVEL     // Comment this out for full double-level routes.  Use it for single-level route testing.
@@ -8,15 +8,9 @@ char APPVERSION[21] = "A-SWT Rev. 11/04/17";
 // This is an "INPUT-ONLY" module that does not provide data to any other Arduino.
 
 // IMPORTANT: LARGE AMOUNTS OF THIS CODE ARE IDENTIAL IN A-LED, SO ALWAYS UPDATE A-LED WHEN WE MAKE CHANGES TO THIS CODE.
-// 10/20/17: Converted SendToLCD/InitializeLCD to OOP object Display_2004/LCD2004.
 // 09/16/17: Changed variable suffixes from Length to Len, No/Number to Num, Record to Rec, etc.
-// 08/29/17: Cleaning up code, updated RS485 message protocol comments.
-// 11/02/16: initializeShiftRegisterPins() and delay in sendToLCD()
 // 11/01/16: checkIfHaltPulledLow(), if it was and we needed to halt, was not releasing the relays and thus could lock ON a solenoid!
 // 11/01/16: Also re-wrote watchdog timer to release relays under any circumstances if left on for more than 1/2 second or whatever.
-// 10/19/16: Extended length of delay when checking if Halt pressed.
-// 10/19/16 by Randy, small mods 10/17/16 to start using new FRAM library
-// Listens for RS485 incoming commands to set turnouts.  Ignores commands to any other Arduino.
 
 // DESCRIPTION OF CIRCULAR BUFFERS Rev: 9/5/17.
 // We use CLOCKWISE circular buffers, and tracks HEAD, TAIL, and COUNT.
@@ -33,7 +27,7 @@ char APPVERSION[21] = "A-SWT Rev. 11/04/17";
 // **************************************************************************************************************************
 
 // *** RS485 MESSAGE PROTOCOLS used by A-SWT  (same as A-LED.)  Byte numbers represent offsets, so they start at zero. ***
-// Because there are so many message types, we will document the protocols here and just use integers for offsets in the code.
+// Rev: 11/06/17
 
 // A-MAS BROADCAST: Mode change
 // Rev: 08/31/17
@@ -78,40 +72,31 @@ char APPVERSION[21] = "A-SWT Rev. 11/04/17";
 
 // **************************************************************************************************************************
 
-
-
 #include <Train_Consts_Global.h>
-#include <Train_Fns_Vars_Global.h>
+const byte THIS_MODULE = ARDUINO_SWT;  // Not sure if/where I will use this - intended if I call a common function but will this "global" be seen there?
+#include <avr/wdt.h>     // Required to call wdt_reset() for watchdog timer for turnout solenoids
 
-// *** SERIAL LCD DISPLAY:
-#include <Display_2004.h>        // Class in quotes means it will be in the A_SWT directory; angle brackets means it will be in the library directory.
-// Pass the address of the serial port we want to use (0..3) such as &Serial1, and a valid baud rate such as 9600 or 115200.
-Display_2004 LCD2004(&Serial1, 115200);
-Display_2004 * ptrLCD2004;       // We need this pointer to pass to any other classes if we want them to be able to write to the LCD display.
+// #include <Train_Fns_Vars_Global.h>
+// #include <Train_Fns_Vars_Consts_SWT.h>   // Functions, Variables, and Constants used by this module, including "parent" (more global) items.
+byte RS485MsgIncoming[RS485_MAX_LEN];  // No need to initialize contents
+byte RS485MsgOutgoing[RS485_MAX_LEN];
 
-#include <Message_SWT.h>              // Class includes all messages sent and received by A_SWT.
-// It might be unnecessary for the following to pass ARDUINO_SWT, since the child class that we instantiate will always be for
-// a specific module (or pair, in the case of A_SWT/A_LED)
-Message_SWT myMessage(ARDUINO_SWT, ptrLCD2004);    // Instantiate the Message_SWT object
+char lcdString[LCD_WIDTH + 1];                   // Global array to hold strings sent to Digole 2004 LCD; last char is for null terminator.
 
-  
-// Note that the serial input buffer is only 64 bytes, which means that we need to keep emptying it since there
-// will be many commands between Arduinos, even though most may not be for THIS Arduino.  If the buffer overflows,
-// then we will be totally screwed up (but it will be apparent in the checksum.)
-const byte RS485_MAX_LEN     = 20;    // buffer length to hold the longest possible RS485 message.  Just a guess.
-      byte RS485MsgIncoming[RS485_MAX_LEN];  // No need to initialize contents
-      byte RS485MsgOutgoing[RS485_MAX_LEN];
-const byte RS485_LEN_OFFSET  =  0;    // first byte of message is always total message length in bytes
-const byte RS485_TO_OFFSET   =  1;    // second byte of message is the ID of the Arduino the message is addressed to
-const byte RS485_FROM_OFFSET =  2;    // third byte of message is the ID of the Arduino the message is coming from
-// Note also that the LAST byte of the message is a CRC8 checksum of all bytes except the last
-const byte RS485_TRANSMIT    = HIGH;  // HIGH = 0x1.  How to set TX_CONTROL pin when we want to transmit RS485
-const byte RS485_RECEIVE     = LOW;   // LOW = 0x0.  How to set TX_CONTROL pin when we want to receive (or NOT transmit) RS485
+// *** SERIAL LCD DISPLAY CLASS:
+#include <Display_2004.h>                // Class in quotes = in the A_SWT directory; angle brackets = in the library directory.
+// Pass address of serial port to use (0..3) such as &Serial1, and baud rate such as 9600 or 115200.
+Display_2004 LCD2004(&Serial1, 115200);  // Instantiate 2004 LCD display "LCD2004."
+Display_2004 * ptrLCD2004;               // Pointer will be passed to any other classes that need to be able to write to the LCD display.
 
-// *** SHIFT REGISTER: The following lines are required by the Centipede input/output shift registers.
-#include <Wire.h>                 // Needed for Centipede shift register
-#include <Centipede.h>
-Centipede shiftRegister;          // Create Centipede shift register object
+// *** MESSAGE CLASS (RS485 and digital pin communications):
+#include <Message_SWT.h>                 // Class includes all messages sent and received by A_SWT, including parent messages.
+Message_SWT myMessage(ptrLCD2004);       // Instantiate message object "myMessage"; requires a pointer to the 2004 LCD display
+
+// *** SHIFT REGISTER CLASS:
+#include <Wire.h>                        // Needed for Centipede shift register.
+#include <Centipede.h>                   // Also, obviously, needed for Centipede.
+Centipede shiftRegister;                 // Instantiate Centipede shift register object "shiftRegister".
 
 // *** FRAM MEMORY MODULE:  Constants and variables needed for use with Hackscribble Ferro RAM.
 // FRAM is used to store the Route Reference Table, the Delayed Action Table, and other data.
@@ -122,8 +107,8 @@ Centipede shiftRegister;          // Create Centipede shift register object
 // To create an instance of FRAM, we specify a name, the FRAM part number, and our SS pin number, i.e.:
 //    Hackscribble_Ferro FRAM1(MB85RS64, PIN_FRAM1);
 // Control buffer in each FRAM is first 128 bytes (address 0..127) reserved for any special purpose we want such as config info.
-#include <SPI.h>
-#include <Hackscribble_Ferro.h>
+#include <SPI.h>                          // FRAM uses SPI communications
+#include <Hackscribble_Ferro.h>           // FRAM library
 const unsigned int FRAM_CONTROL_BUF_SIZE = 128;  // This defaults to 64 bytes in the library, but we modified it
 // FRAM1 stores the Route Reference, Park 1 Reference, and Park 2 Reference tables.
 // FRAM1 control block (first 128 bytes):
@@ -134,7 +119,7 @@ byte               FRAM1ControlBuf[FRAM_CONTROL_BUF_SIZE];
 unsigned int       FRAM1BufSize             =   0;  // We will retrieve this via a function call, but it better be 128!
 unsigned long      FRAM1Bottom              =   0;  // Should be 128 (address 0..127)
 unsigned long      FRAM1Top                 =   0;  // Highest address we can write to...should be 8191 (addresses are 0..8191 = 8192 bytes total)
-const byte         FRAM1VERSION[3]          = {  9, 16, 17 };  // This must match the version date stored in the FRAM1 control block.
+const byte         FRAM1VERSION[3]          = { 12, 02, 17 };  // This must match the version date stored in the FRAM1 control block.
 byte               FRAM1GotVersion[3]       = {  0,  0,  0 };  // This will hold the version retrieved from FRAM1, to confirm matches version above.
 const unsigned int FRAM1_ROUTE_START        = 128;  // Start writing FRAM1 Route Reference table data at this memory address, the lowest available address
 const byte         FRAM1_ROUTE_REC_LEN      =  77;  // Each element of the Route Reference table is 77 bytes long
@@ -145,11 +130,11 @@ const byte         FRAM1_ROUTE_REC_LEN      =  77;  // Each element of the Route
 #endif
 const byte         FRAM1_RECS_PER_ROUTE     =  11;  // Max number of block/turnout records in a single route in the route table.
 const unsigned int FRAM1_PARK1_START        = FRAM1_ROUTE_START + (FRAM1_ROUTE_REC_LEN * FRAM1_ROUTE_RECS);
-const byte         FRAM1_PARK1_REC_LEN      = 118;
+const byte         FRAM1_PARK1_REC_LEN      = 127;  // Was 118 until 12/3/17
 const byte         FRAM1_PARK1_RECS         =  19;
 const byte         FRAM1_RECS_PER_PARK1     =  21;  // Max number of block/turnout records in a single Park 1 route in the route table.
 const unsigned int FRAM1_PARK2_START        = FRAM1_PARK1_START + (FRAM1_PARK1_REC_LEN * FRAM1_PARK1_RECS);
-const byte         FRAM1_PARK2_REC_LEN      =  43;
+const byte         FRAM1_PARK2_REC_LEN      =  52;  // Was 43 until 12/3/17
 const byte         FRAM1_PARK2_RECS         =   4;
 const byte         FRAM1_RECS_PER_PARK2     =   6;  // Max number of block/turnout records in a single Park 2 route in the route table.
 Hackscribble_Ferro FRAM1(MB85RS64, PIN_FRAM1);   // Create the FRAM1 object!
@@ -176,9 +161,9 @@ Hackscribble_Ferro FRAM1(MB85RS64, PIN_FRAM1);   // Create the FRAM1 object!
 const byte MAX_TURNOUTS_TO_BUF            =  80;  // How many turnout commands might pile up before they can be executed?
 const unsigned long TURNOUT_ACTIVATION_MS = 110;  // How many milliseconds to hold turnout solenoids before releasing.
 const byte TOTAL_TURNOUTS                 =  32;  // Used to dimension our turnout_no/relay_no cross reference table.  30 connected, but 32 relays.
-
-#include <avr/wdt.h>     // Required to call wdt_reset() for watchdog timer for turnout solenoids
-
+/*
+#include <avr/wdt.h>     // Required to call wdt_reset() for watchdog timer for turnout solenoids  MOVED TO SWT FNS VARS CONST
+*/
 // *****************************************************************************************
 // *********************** S T R U C T U R E   D E F I N I T I O N S ***********************
 // *****************************************************************************************
@@ -188,33 +173,41 @@ const byte TOTAL_TURNOUTS                 =  32;  // Used to dimension our turno
 // A-SWT needs route information for when it gets commands to set all turnouts for a given route (regular, park1, or park2.)
 // Other times, A-SWT will simply get a command to set an individual turnout to either Normal or Reverse, or a bit string.
 struct routeReference {                 // Each element is 77 bytes, 26 or 70 records (single or double level)
-  byte routeNum;
-  char originSiding[5];
-  byte originTown;
-  char destSiding[5];
-  byte destTown;
-  byte maxTrainLen;                     // In inches
-  char restrictions[6];                 // Possible future use
-  byte entrySensor;                     // Entry sensor number of the dest siding - where we start slowing down
-  byte exitSensor;                      // Exit sensor number of the dest siding - where we do a Stop Immediate
-  char route[FRAM1_RECS_PER_ROUTE][5];  // Blocks and Turnouts, up to FRAM1_RECS_PER_ROUTE per route, each with 4 chars (plus \0)
+  byte routeNum;                        // Redundant, but what the heck.
+  char originSiding[5];                 // 4 chars + null terminator = 5 bytes
+  byte originTown;                      // 1 byte
+  char destSiding[5];                   // 4 chars + null terminator = 5 bytes
+  byte destTown;                        // 1 byte
+  byte maxTrainLen;                     // In inches, typically the destination siding length.  1 byte
+  char restrictions[6];                 // Possible future use.  5 char + null terminator = 6 bytes
+  byte entrySensor;                     // Entry sensor number of the dest siding - where we start slowing down.  1 byte
+  byte exitSensor;                      // Exit sensor number of the dest siding - where we do a Stop Immediate.  1 byte
+  char route[FRAM1_RECS_PER_ROUTE][5];  // Blocks and Turnouts, up to FRAM1_RECS_PER_ROUTE per route, each with 4 chars (plus \0).  55 bytes
 };
 routeReference routeElement;            // Use this to hold individual elements when retrieved
 
-struct park1Reference {                 // Each element is 118 bytes, total of 19 records
-  byte routeNum;
-  char originSiding[5];
-  char destSiding[5];
+struct park1Reference {                 // Each element is 127 bytes, total of 19 records = 2413 bytes.
+  byte routeNum;                        // Redundant, but what the heck.
+  char originSiding[5];                 // 4 chars + null terminator = 5 bytes
+  byte originTown;                      // 1 byte
+  char destSiding[5];                   // 4 chars + null terminator = 5 bytes
+  byte destTown;                        // 1 byte
+  byte maxTrainLen;                     // In inches, typically the destination siding length.  1 byte
+  char restrictions[6];                 // Possible future use.  5 char + null terminator = 6 bytes
   byte entrySensor;                     // Entry sensor number of the dest siding - where we start slowing down
   byte exitSensor;                      // Exit sensor number of the dest siding - where we do a Stop Immediate
   char route[FRAM1_RECS_PER_PARK1][5];  // Blocks and Turnouts, up to FRAM1_RECS_PER_PARK1 per route, each with 4 chars (plus \0)
 };
 park1Reference park1Element;            // Use this to hold individual elements when retrieved
 
-struct park2Reference {                 // Each record 43 bytes long, total of just 4 records
-  byte routeNum;
-  char originSiding[5];
-  char destSiding[5];
+struct park2Reference {                 // Each record 52 bytes long, total of just 4 records = 208 bytes
+  byte routeNum;                        // Redundant, but what the heck.
+  char originSiding[5];                 // 4 chars + null terminator = 5 bytes
+  byte originTown;                      // 1 byte
+  char destSiding[5];                   // 4 chars + null terminator = 5 bytes
+  byte destTown;                        // 1 byte
+  byte maxTrainLen;                     // In inches, typically the destination siding length.  1 byte
+  char restrictions[6];                 // Possible future use.  5 char + null terminator = 6 bytes
   byte entrySensor;                     // Entry sensor number of the dest siding - where we start slowing down
   byte exitSensor;                      // Exit sensor number of the dest siding - where we do a Stop Immediate
   char route[FRAM1_RECS_PER_PARK2][5];  // Blocks and Turnouts, up to FRAM1_RECS_PER_PARK2 per route, each with 4 chars (plus \0)
@@ -629,10 +622,17 @@ ISR(WDT_vect) {
 // *** HERE ARE FUNCTIONS USED BY VIRTUALLY ALL ARDUINOS *** REV: 09-26-17 ***
 // ***************************************************************************
 
+
+
+
+
 /*
 
+
+
+
 bool RS485GetMessage(byte tMsg[]) {
-  // 10/19/16: Updated string handling for sendToLCD and Serial.print.
+  // 10/19/16: Updated string handling for LCD2004.send and Serial.print.
   // 10/1/16: Returns true or false, depending if a complete message was read.
   // If the whole message is not available, tMsg[] will not be affected, so ok to call any time.
   // Does not require any data in the incoming RS485 serial buffer when it is called.
@@ -644,6 +644,7 @@ bool RS485GetMessage(byte tMsg[]) {
   // tmsg[] is also "returned" by the function since arrays are passed by reference.
   // If this function returns true, then we are guaranteed to have a real/accurate message in the
   // buffer, including good CRC.  However, the function does not check if it is to "us" (this Arduino) or not.
+
   byte tMsgLen = Serial2.peek();     // First byte will be message length
   byte tBufLen = Serial2.available();  // How many bytes are waiting?  Size is 64.
   if (tBufLen >= tMsgLen) {  // We have at least enough bytes for a complete incoming message
@@ -754,10 +755,10 @@ void initializeFRAM1AndGetControlBlock() {
   return;
 }
 
-/*
 void endWithFlashingLED(int numFlashes) {
   // Rev 10/05/16: Version for Arduinos WITH relays that should be released (A-SWT turnouts, A-LEG accessories)
   initializeShiftRegisterPins();  // Release all relay coils that might be activating turnout solenoids
+
   requestEmergencyStop();
   while (true) {
     for (int i = 1; i <= numFlashes; i++) {
@@ -770,7 +771,6 @@ void endWithFlashingLED(int numFlashes) {
   }
   return;  // Will never get here due to above infinite loop
 }
-*/
 
 void checkIfHaltPinPulledLow() {
   // Rev 10/29/16
@@ -800,3 +800,20 @@ void checkIfHaltPinPulledLow() {
   return;
 }
 
+void chirp() {
+  // Rev 10/05/16
+  digitalWrite(PIN_SPEAKER, LOW);  // turn on piezo
+  delay(10);
+  digitalWrite(PIN_SPEAKER, HIGH);
+  return;
+}
+
+void requestEmergencyStop() {
+  // Rev 10/05/16
+  pinMode(PIN_HALT, OUTPUT);
+  digitalWrite(PIN_HALT, LOW);   // Pulling this low tells all Arduinos to HALT (including A-LEG)
+  delay(1000);
+  digitalWrite(PIN_HALT, HIGH);
+  pinMode(PIN_HALT, INPUT);
+  return;
+}

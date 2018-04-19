@@ -9,7 +9,7 @@ char APPVERSION[21] = "A-BTN Rev. 10/01/17";
 // 09/16/17: Brought a lot of loop code out to functions; much streamlining, variable re-naming.
 // 09/13/17: Changed variable suffixes and constant names for better programming form.
 // 08/28/17: Const LCD width, converted some inline loop code to functions, added RS485 protocol comments, and other clean-up.
-// 11/01/16: InitializeShiftRegisterPins() and delay in sendToLCD()
+// 11/01/16: InitializeShiftRegisterPins() and delay in LCD2004.send()
 // 11/01/16: updated "delay between button release and next press" logic.
 // 11/01/16: ALSO was getting RS485 input buf overflow if I started and stopped Manual mode constantly and pressed a ton of buttons constantly.
 // I think that problem is fixed.  Regardless, it only happened if I go hog wild pressing buttons and changing modes.
@@ -70,16 +70,23 @@ char APPVERSION[21] = "A-BTN Rev. 10/01/17";
 
 
 #include <Train_Consts_Global.h>
+const byte THIS_MODULE = ARDUINO_BTN;  // Not sure if/where I will use this - intended if I call a common function but will this "global" be seen there?
+byte RS485MsgIncoming[RS485_MAX_LEN];  // No need to initialize contents
+byte RS485MsgOutgoing[RS485_MAX_LEN];
+
+char lcdString[LCD_WIDTH + 1];                   // Global array to hold strings sent to Digole 2004 LCD; last char is for null terminator.
 
 // We will start in MODE_UNDEFINED, STATE_STOPPED.  We must receive a message from A-MAS to tell us otherwise.
 byte modeCurrent  = MODE_UNDEFINED;
 byte stateCurrent = STATE_STOPPED;
                               
-// *** SERIAL LCD DISPLAY: The following lines are required by the Digole serial LCD display, connected to serial port 1.
-#define _Digole_Serial_UART_      // To tell compiler compile the serial communication only
-#include <DigoleSerial.h>
-DigoleSerialDisp LCDDisplay(&Serial1, 115200); //UART TX on arduino to RX on module
+// *** SERIAL LCD DISPLAY CLASS:
+#include <Display_2004.h>                // Class in quotes = in the A_SWT directory; angle brackets = in the library directory.
+// Pass address of serial port to use (0..3) such as &Serial1, and baud rate such as 9600 or 115200.
+Display_2004 LCD2004(&Serial1, 115200);  // Instantiate 2004 LCD display "LCD2004."
+Display_2004 * ptrLCD2004;               // Pointer will be passed to any other classes that need to be able to write to the LCD display.
 
+/*
 // *** RS485 MESSAGES: Here are constants and arrays related to the RS485 messages
 // Note that the serial input buffer is only 64 bytes, which means that we need to keep emptying it since there
 // will be many commands between Arduinos, even though most may not be for THIS Arduino.  If the buffer overflows,
@@ -93,7 +100,7 @@ const byte RS485_FROM_OFFSET =  2;    // third byte of message is the ID of the 
 // Note also that the LAST byte of the message is a CRC8 checksum of all bytes except the last
 const byte RS485_TRANSMIT    = HIGH;  // HIGH = 0x1.  How to set TX_CONTROL pin when we want to transmit RS485
 const byte RS485_RECEIVE     = LOW;   // LOW = 0x0.  How to set TX_CONTROL pin when we want to receive (or NOT transmit) RS485
-
+*/
 // *** SHIFT REGISTER: The following lines are required by the Centipede input/output shift registers.
 #include <Wire.h>                 // Needed for Centipede shift register
 #include <Centipede.h>
@@ -120,9 +127,9 @@ void setup() {
   shiftRegister.initialize();           // Set all registers to default
   initializeShiftRegisterPins();        // Set all Centipede shift register pins to INPUT for monitoring button presses
   initializePinIO();                    // Initialize all of the I/O pins and turn all LEDs on control panel off
-  initializeLCDDisplay();               // Initialize the Digole 20 x 04 LCD display
+  LCD2004.init();                       // Initialize the 20 x 04 Digole serial LCD display
   sprintf(lcdString, APPVERSION);       // Display the application version number on the LCD display
-  sendToLCD(lcdString);
+  LCD2004.send(lcdString);
   Serial.println(lcdString);
 
 }
@@ -206,6 +213,7 @@ void initializePinIO() {
 
 void initializeShiftRegisterPins() {
   // Rev: 10/26/16.  Set all Centipede shift register pins to input for monitoring button presses
+
   for (int i = 0; i < 8; i++) {         // For each of 4 chips per board / 2 boards = 8 chips @ 16 bits/chip
     shiftRegister.portMode(i, 0b1111111111111111);   // 0 = OUTPUT, 1 = INPUT.  Sets all pins on chip to INPUT
     shiftRegister.portPullup(i, 0b1111111111111111); // 0 = NO PULLUP, 1 = PULLUP.  Sets all pins on chip to PULLUP
@@ -239,7 +247,7 @@ byte turnoutButtonPressed() {
       bp = pinNum + 1;  // i.e. pin 0 = button/turnout 1
       chirp();  // operator feedback!
       sprintf(lcdString, "Button %2i pressed.", bp);
-      sendToLCD(lcdString);
+      LCD2004.send(lcdString);
       Serial.println(lcdString);
       break;
     }
@@ -283,7 +291,7 @@ void sendRS485ButtonPressUpdate(const byte tButtonPressed) {
   // If not coming from A_MAS or not an 'B'-type (button press) request, something is wrong.
   if ((RS485MsgIncoming[RS485_FROM_OFFSET] != ARDUINO_MAS) || (RS485MsgIncoming[3] != 'B')) {
     sprintf(lcdString, "Unexpected message!");
-    sendToLCD(lcdString);
+    LCD2004.send(lcdString);
     Serial.print(lcdString);
     endWithFlashingLED(6);
   }
@@ -336,24 +344,24 @@ bool RS485GetMessage(byte tMsg[]) {
   // tmsg[] is also "returned" by the function since arrays are passed by reference.
   // If this function returns true, then we are guaranteed to have a real/accurate message in the
   // buffer, including good CRC.  However, the function does not check if it is to "us" (this Arduino) or not.
-  // 10/19/16: Updated string handling for sendToLCD and Serial.print.
+  // 10/19/16: Updated string handling for LCD2004.send and Serial.print.
   byte tMsgLen = Serial2.peek();     // First byte will be message length
   byte tBufLen = Serial2.available();  // How many bytes are waiting?  Size is 64.
   if (tBufLen >= tMsgLen) {  // We have at least enough bytes for a complete incoming message
     digitalWrite(PIN_RS485_RX_LED, HIGH);       // Turn on the receive LED
     if (tMsgLen < 5) {                 // Message too short to be a legit message.  Fatal!
       sprintf(lcdString, "%.20s", "RS485 msg too short!");
-      sendToLCD(lcdString);
+      LCD2004.send(lcdString);
       Serial.println(lcdString);
       endWithFlashingLED(1);
     } else if (tMsgLen > RS485_MAX_LEN) {        // Message too long to be any real message.  Fatal!
       sprintf(lcdString, "%.20s", "RS485 msg too long!");
-      sendToLCD(lcdString);
+      LCD2004.send(lcdString);
       Serial.println(lcdString);
       endWithFlashingLED(1);
     } else if (tBufLen > 60) {            // RS485 serial input buffer should never get this close to overflow.  Fatal!
       sprintf(lcdString, "%.20s", "RS485 in buf ovrflw!");
-      sendToLCD(lcdString);
+      LCD2004.send(lcdString);
       Serial.println(lcdString);
       endWithFlashingLED(1);
     }
@@ -362,7 +370,7 @@ bool RS485GetMessage(byte tMsg[]) {
     }
     if (tMsg[tMsgLen - 1] != calcChecksumCRC8(tMsg, tMsgLen - 1)) {   // Bad checksum.  Fatal!
       sprintf(lcdString, "%.20s", "RS485 bad checksum!");
-      sendToLCD(lcdString);
+      LCD2004.send(lcdString);
       Serial.println(lcdString);
       endWithFlashingLED(1);
     }
@@ -396,6 +404,7 @@ byte calcChecksumCRC8(const byte *data, byte len) {
   return crc;
 }
 
+
 void initializeLCDDisplay() {
   // Rev 09/26/17 by RDP
   LCDDisplay.begin();                     // Required to initialize LCD
@@ -408,19 +417,19 @@ void initializeLCDDisplay() {
   return;
 }
 
-void sendToLCD(const char nextLine[]) {
+void LCD2004.send(const char nextLine[]) {
   // Display a line of information on the bottom line of the 2004 LCD display on the control panel, and scroll the old lines up.
   // INPUTS: nextLine[] is a char array, must be less than 20 chars plus null or system will trigger fatal error.
   // The char arrays that hold the data are LCD_WIDTH + 1 (21) bytes long, to allow for a
   // 20-byte text message (max.) plus the null character required.
   // Sample calls:
   //   char lcdString[LCD_WIDTH + 1];  // Global array to hold strings sent to Digole 2004 LCD
-  //   sendToLCD("A-SWT Ready!");   Note: more than 20 characters will crash!
+  //   LCD2004.send("A-SWT Ready!");   Note: more than 20 characters will crash!
   //   sprintf(lcdString, "%.20s", "Hello world."); // 20 is hard-coded since don't know how to format with const LCD_WIDTH
-  //   sendToLCD(lcdString);   i.e. "Hello world."
+  //   LCD2004.send(lcdString);   i.e. "Hello world."
   //   int a = 7; unsigned long t = millis(); char c = 'R';
   //   sprintf(lcdString, "I %3i T %6lu C %3c", a, t, c);  Will also crash if longer than 20 chars!
-  //   sendToLCD(lcdString);   i.e. "I...7.T...3149.C...R"
+  //   LCD2004.send(lcdString);   i.e. "I...7.T...3149.C...R"
   // Rev 08/30/17 by RDP: Changed hard-coded "20"s to LCD_WIDTH
   // Rev 10/14/16 - TimMe and RDP
 
@@ -458,6 +467,8 @@ void sendToLCD(const char nextLine[]) {
 
 void endWithFlashingLED(int numFlashes) {
   // Rev 10/05/16: Version for Arduinos WITHOUT relays that should be released.
+
+
   requestEmergencyStop();
   while (true) {
     for (int i = 1; i <= numFlashes; i++) {
@@ -501,14 +512,16 @@ void checkIfHaltPinPulledLow() {
   if (digitalRead(PIN_HALT) == LOW) {   // See if it lasts a while
     delay(1);  // Pause to let a spike resolve
     if (digitalRead(PIN_HALT) == LOW) {  // If still low, we have a legit Halt, not a neg voltage spike
+
+
       chirp();
       sprintf(lcdString, "%.20s", "HALT pin low!  End.");
-      sendToLCD(lcdString);
+      LCD2004.send(lcdString);
       Serial.println(lcdString);
       while (true) { }  // For a real halt, just loop forever.
     } else {
       sprintf(lcdString,"False HALT detected.");
-      sendToLCD(lcdString);
+      LCD2004.send(lcdString);
       Serial.println(lcdString);
     }
   }
