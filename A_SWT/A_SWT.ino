@@ -1,5 +1,5 @@
-// A_SWT Rev: 12/03/17.
-char APPVERSION[21] = "A-SWT Rev. 12/03/17";
+// A_SWT Rev: 04/19/18.
+char APPVERSION[21] = "A-SWT Rev. 04/19/18";
 
 // Include the following #define if we want to run the system with just the lower-level track.
 #define SINGLE_LEVEL     // Comment this out for full double-level routes.  Use it for single-level route testing.
@@ -8,6 +8,7 @@ char APPVERSION[21] = "A-SWT Rev. 12/03/17";
 // This is an "INPUT-ONLY" module that does not provide data to any other Arduino.
 
 // IMPORTANT: LARGE AMOUNTS OF THIS CODE ARE IDENTIAL IN A-LED, SO ALWAYS UPDATE A-LED WHEN WE MAKE CHANGES TO THIS CODE.
+// 04/19/18: Lots of changes to use new const, message, and 2004 LCD objects.
 // 09/16/17: Changed variable suffixes from Length to Len, No/Number to Num, Record to Rec, etc.
 // 11/01/16: checkIfHaltPulledLow(), if it was and we needed to halt, was not releasing the relays and thus could lock ON a solenoid!
 // 11/01/16: Also re-wrote watchdog timer to release relays under any circumstances if left on for more than 1/2 second or whatever.
@@ -26,19 +27,10 @@ char APPVERSION[21] = "A-SWT Rev. 12/03/17";
 
 // **************************************************************************************************************************
 
-// *** RS485 MESSAGE PROTOCOLS used by A-SWT  (same as A-LED.)  Byte numbers represent offsets, so they start at zero. ***
+// *** RS485 MESSAGE PROTOCOLS used by A-SWT  (similar to A-LED.)  Byte numbers represent offsets, so they start at zero. ***
 // Rev: 11/06/17
-
-// A-MAS BROADCAST: Mode change
-// Rev: 08/31/17
-// OFFSET DESC      SIZE  CONTENTS
-//   	0	  Length	  Byte	7
-//   	1	  To	      Byte	99 (ALL)
-//   	2	  From	    Byte	1 (A_MAS)
-//    3   Msg Type  Char  'M' means this is a Mode/State update command
-//   	4	  Mode	    Byte  1..5 [Manual | Register | Auto | Park | POV]
-//   	5	  State	    Byte  1..3 [Running | Stopping | Stopped]
-//   	6	  Cksum	    Byte  0..255
+// UPDATE 4/19/18: I don't think A_SWT cares about Mode change commands coming from A_MAS, so deleted it from this list...
+// We're going to do whatever A_MAS tells us to do (i.e. throw a turnout) no matter the mode, because that's up to A_MAS (based on mode.)
 
 // A-MAS to A-SWT:  Command to set an individual turnout
 // Rev: 08/31/17
@@ -74,24 +66,24 @@ char APPVERSION[21] = "A-SWT Rev. 12/03/17";
 
 #include <Train_Consts_Global.h>
 const byte THIS_MODULE = ARDUINO_SWT;  // Not sure if/where I will use this - intended if I call a common function but will this "global" be seen there?
+
 #include <avr/wdt.h>     // Required to call wdt_reset() for watchdog timer for turnout solenoids
 
-// #include <Train_Fns_Vars_Global.h>
-// #include <Train_Fns_Vars_Consts_SWT.h>   // Functions, Variables, and Constants used by this module, including "parent" (more global) items.
-byte RS485MsgIncoming[RS485_MAX_LEN];  // No need to initialize contents
-byte RS485MsgOutgoing[RS485_MAX_LEN];
 
-char lcdString[LCD_WIDTH + 1];                   // Global array to hold strings sent to Digole 2004 LCD; last char is for null terminator.
 
 // *** SERIAL LCD DISPLAY CLASS:
 #include <Display_2004.h>                // Class in quotes = in the A_SWT directory; angle brackets = in the library directory.
+// Instantiate a Display_2004 object called "LCD2004".
 // Pass address of serial port to use (0..3) such as &Serial1, and baud rate such as 9600 or 115200.
 Display_2004 LCD2004(&Serial1, 115200);  // Instantiate 2004 LCD display "LCD2004."
 Display_2004 * ptrLCD2004;               // Pointer will be passed to any other classes that need to be able to write to the LCD display.
+char lcdString[LCD_WIDTH + 1];           // Global array to hold strings sent to Digole 2004 LCD; last char is for null terminator.
 
 // *** MESSAGE CLASS (RS485 and digital pin communications):
 #include <Message_SWT.h>                 // Class includes all messages sent and received by A_SWT, including parent messages.
-Message_SWT myMessage(ptrLCD2004);       // Instantiate message object "myMessage"; requires a pointer to the 2004 LCD display
+Message_SWT Message(ptrLCD2004);         // Instantiate message object "Message"; requires a pointer to the 2004 LCD display
+byte MsgIncoming[RS485_MAX_LEN];         // Global array for incoming inter-Arduino messages.  No need to init contents.  Probably shouldn't call them "RS485" though.
+// byte MsgOutgoing[RS485_MAX_LEN];    No need to initialize contents.  Also, A_SWT doesn't send any messages, not even digital lines.
 
 // *** SHIFT REGISTER CLASS:
 #include <Wire.h>                        // Needed for Centipede shift register.
@@ -107,9 +99,9 @@ Centipede shiftRegister;                 // Instantiate Centipede shift register
 // To create an instance of FRAM, we specify a name, the FRAM part number, and our SS pin number, i.e.:
 //    Hackscribble_Ferro FRAM1(MB85RS64, PIN_FRAM1);
 // Control buffer in each FRAM is first 128 bytes (address 0..127) reserved for any special purpose we want such as config info.
-#include <SPI.h>                          // FRAM uses SPI communications
-#include <Hackscribble_Ferro.h>           // FRAM library
-const unsigned int FRAM_CONTROL_BUF_SIZE = 128;  // This defaults to 64 bytes in the library, but we modified it
+#include <SPI.h>                                    // FRAM uses SPI communications
+#include <Hackscribble_Ferro.h>                     // FRAM library
+const unsigned int FRAM_CONTROL_BUF_SIZE = 128;     // This defaults to 64 bytes in the library, but we modified it
 // FRAM1 stores the Route Reference, Park 1 Reference, and Park 2 Reference tables.
 // FRAM1 control block (first 128 bytes):
 // Address 0..2 (3 bytes)   = Version number month, date, year i.e. 07, 13, 16
@@ -138,6 +130,7 @@ const byte         FRAM1_PARK2_REC_LEN      =  52;  // Was 43 until 12/3/17
 const byte         FRAM1_PARK2_RECS         =   4;
 const byte         FRAM1_RECS_PER_PARK2     =   6;  // Max number of block/turnout records in a single Park 2 route in the route table.
 Hackscribble_Ferro FRAM1(MB85RS64, PIN_FRAM1);   // Create the FRAM1 object!
+// Use the following code if we need a second FRAM memory module:
 // FRAM2 control block (first 128 bytes) contains no data - we don't need a version number because we don't have any initial data to read.
 // FRAM2 stores the Delayed Action table.  Table is 12 bytes per record, perhaps 400 records => approx. 5K bytes.
 // byte               FRAM2ControlBuf[FRAM_CONTROL_BUF_SIZE];
@@ -252,16 +245,12 @@ byte turnoutCrossRef[(TOTAL_TURNOUTS * 2)] =
 void setup() {
 
   Serial.begin(115200);                 // PC serial monitor window
-  // Serial1 is for the 20x4 LCD debug display, already set up
+  // Serial1 is for the Digole 20x4 LCD debug display, already set up
   Serial2.begin(115200);                // RS485  up to 115200
   Wire.begin();                         // Start I2C for Centipede shift register
   shiftRegister.initialize();           // Set all registers to default
   initializeShiftRegisterPins();        // This ensures NO relays (thus turnout solenoids) are turned on (which would burn out solenoids)
   initializePinIO();                    // Initialize all of the I/O pins
-  
-
-  
-  
   LCD2004.init();                       // Initialize the 20 x 04 Digole serial LCD display
   sprintf(lcdString, APPVERSION);       // Display the application version number on the LCD display
   LCD2004.send(lcdString);
@@ -283,10 +272,12 @@ void loop() {
   checkIfHaltPinPulledLow();  // If someone has pulled the Halt pin low, release relays and just stop
 
   // See if we have an incoming RS485 message...
-  if (myMessage.RS485GetMessage(RS485MsgIncoming)) {   // If returns true, then we got a complete RS485 message (may or may not be for us)
-    if (RS485MsgIncoming[RS485_TO_OFFSET] == ARDUINO_SWT) {
+//  if (Message.RS485GetMessage(MsgIncoming)) {   // If returns true, then we got a complete RS485 message (may or may not be for us)
+  if (Message.Receive(MsgIncoming)) {   // If returns true, then we got a complete RS485 message (may or may not be for us)
+//    if (MsgIncoming[RS485_TO_OFFSET] == ARDUINO_SWT) {
+    if ((Message.GetTo(MsgIncoming)) == ARDUINO_SWT) {
       // The incoming message was for us!  It will either be to set a Turnout or a Route or a sting of bits for "last-known" from A-MAS.
-      // Byte #3 of RS485MsgIncoming can be 'N' or 'R', for Normal or Revers with a turnout number, or 'T' (for rouTe) or '1' (for Park 1) or
+      // Byte #3 of MsgIncoming can be 'N' or 'R', for Normal or Revers with a turnout number, or 'T' (for rouTe) or '1' (for Park 1) or
       // '2' (for Park 2) with a route number, or 'L' for "set to Last-known turnout positions" followed by a 4-byte = 32-bit data of
       // 0=Normal, 1=Reverse, and each bit corresponds to the turnout number in question (offset by 1), starting with bit 0 = turnout #1.
       // i.e. 'R08' = Turnout #8 reverse
@@ -296,17 +287,19 @@ void loop() {
       // i.e. 'L2395' = Set all 32 turnouts as indicated by bit pattern 2395.  Each byte treated as independent 8 bits.
 
       // *** IS THIS A SINGLE TURNOUT COMMAND i.e. "Set turnout #14 to Reverse"?
-      if ((RS485MsgIncoming[3] == 'N') || (RS485MsgIncoming[3] == 'R')) {    // Discrete Normal|Reverse turnout command
-        sprintf(lcdString, "Received: %2i %c", RS485MsgIncoming[4], RS485MsgIncoming[3]);
+//      if ((MsgIncoming[3] == 'N') || (MsgIncoming[3] == 'R')) {    // Discrete Normal|Reverse turnout command
+      if ((Message.GetType(MsgIncoming) == 'N') || (Message.GetType(MsgIncoming) == 'R')) {    // Discrete Normal|Reverse turnout command
+        sprintf(lcdString, "Received: %2i %c", MsgIncoming[4], MsgIncoming[3]);
         LCD2004.send(lcdString);
         Serial.println(lcdString);
         // Add the turnout command to the circular buffer for later processing...
-        turnoutCmdBufEnqueue(RS485MsgIncoming[3], RS485MsgIncoming[4]);
+        turnoutCmdBufEnqueue(MsgIncoming[3], MsgIncoming[4]);
 
       // *** IS THIS A ROUTE (not PARK1 or PARK2) COMMAND i.e. "Set all turnouts to be aligned for Route 47"
-      } else if (RS485MsgIncoming[3] == 'T') {    // rouTe command, so create a bunch of turnout commands...
-        byte routeNum = RS485MsgIncoming[4];
-        sprintf(lcdString, "Route: %2i", RS485MsgIncoming[4]);
+//      } else if (MsgIncoming[3] == 'T') {    // rouTe command, so create a bunch of turnout commands...
+      } else if (Message.GetType(MsgIncoming) == 'T') {    // rouTe command, so create a bunch of turnout commands...
+        byte routeNum = MsgIncoming[4];
+        sprintf(lcdString, "Route: %2i", MsgIncoming[4]);
         LCD2004.send(lcdString);
         Serial.println(lcdString);
         // Retrieve route number "routeNum" from Route Reference table (FRAM1) and create a new record in the
@@ -340,8 +333,9 @@ void loop() {
           }
         }
 
-      } else if (RS485MsgIncoming[3] == '1') {    // 'Park 1' route command, so create a bunch of turnout commands...
-        byte routeNum = RS485MsgIncoming[4];
+//      } else if (MsgIncoming[3] == '1') {    // 'Park 1' route command, so create a bunch of turnout commands...
+      } else if (Message.GetType(MsgIncoming) == '1') {    // 'Park 1' route command, so create a bunch of turnout commands...
+        byte routeNum = MsgIncoming[4];
         sprintf(lcdString, "Park 1 route %2i", routeNum);
         LCD2004.send(lcdString);
         Serial.println(lcdString);
@@ -375,9 +369,9 @@ void loop() {
             endWithFlashingLED(3);
           }
         }
-
-      } else if (RS485MsgIncoming[3] == '2') {    // 'Park 2' route command, so create a bunch of turnout commands...
-        byte routeNum = RS485MsgIncoming[4];
+//      } else if (MsgIncoming[3] == '2') {    // 'Park 2' route command, so create a bunch of turnout commands...
+      } else if (Message.GetType(MsgIncoming) == '2') {    // 'Park 2' route command, so create a bunch of turnout commands...
+        byte routeNum = MsgIncoming[4];
         sprintf(lcdString, "Park 2 route %2i", routeNum);
         LCD2004.send(lcdString);
         Serial.println(lcdString);
@@ -411,8 +405,8 @@ void loop() {
             endWithFlashingLED(3);
           }
         }
-
-      } else if (RS485MsgIncoming[3] == 'L') {    // Last-known-orientation command, so create a turnout command for each bit in next 4 bytes...
+//      } else if (MsgIncoming[3] == 'L') {    // Last-known-orientation command, so create a turnout command for each bit in next 4 bytes...
+      } else if (Message.GetType(MsgIncoming) == 'L') {    // Last-known-orientation command, so create a turnout command for each bit in next 4 bytes...
         // i.e. 'L2395' = Set all 32 turnouts as indicated by bit pattern 2395.
         // Read each of 32 bits and populate the turnout command circular buffer with 32 new records.
         sprintf(lcdString, "%.20s", "Set last-known-route");
@@ -421,7 +415,7 @@ void loop() {
         for (byte i = 0; i < 4; i++) {   // i represents each of the four bytes of turnout data
           for (byte j = 0; j < 8; j++) {  // j represents each bit of a byte
             byte k = (i * 8) + j + 1;         // k represents turnout number (1..32)
-            if (bitRead(RS485MsgIncoming[4 + i], j) == 0) {  // Bit is zero, so set turnout Normal
+            if (bitRead(MsgIncoming[RS485_LAST_KNOWN_OFFSET + i], j) == 0) {  // Bit is zero, so set turnout Normal
               turnoutCmdBufEnqueue('N', k);
             } else {                                       // Bit must be a 1, so set turnout Reverse
               turnoutCmdBufEnqueue('R', k);
@@ -622,90 +616,6 @@ ISR(WDT_vect) {
 // *** HERE ARE FUNCTIONS USED BY VIRTUALLY ALL ARDUINOS *** REV: 09-26-17 ***
 // ***************************************************************************
 
-
-
-
-
-/*
-
-
-
-
-bool RS485GetMessage(byte tMsg[]) {
-  // 10/19/16: Updated string handling for LCD2004.send and Serial.print.
-  // 10/1/16: Returns true or false, depending if a complete message was read.
-  // If the whole message is not available, tMsg[] will not be affected, so ok to call any time.
-  // Does not require any data in the incoming RS485 serial buffer when it is called.
-  // Detects incoming serial buffer overflow and fatal errors.
-  // If there is a fatal error, call endWithFlashingLED() which itself attempts to invoke an emergency stop.
-  // This only reads and returns one complete message at a time, regardless of how much more data
-  // may be waiting in the incoming RS485 serial buffer.
-  // Input byte tmsg[] is the initialized incoming byte array whose contents may be filled.
-  // tmsg[] is also "returned" by the function since arrays are passed by reference.
-  // If this function returns true, then we are guaranteed to have a real/accurate message in the
-  // buffer, including good CRC.  However, the function does not check if it is to "us" (this Arduino) or not.
-
-  byte tMsgLen = Serial2.peek();     // First byte will be message length
-  byte tBufLen = Serial2.available();  // How many bytes are waiting?  Size is 64.
-  if (tBufLen >= tMsgLen) {  // We have at least enough bytes for a complete incoming message
-    digitalWrite(PIN_RS485_RX_LED, HIGH);       // Turn on the receive LED
-    if (tMsgLen < 5) {                 // Message too short to be a legit message.  Fatal!
-      sprintf(lcdString, "%.20s", "RS485 msg too short!");
-      LCD2004.send(lcdString);
-      Serial.println(lcdString);
-      endWithFlashingLED(1);
-    } else if (tMsgLen > RS485_MAX_LEN) {            // Message too long to be any real message.  Fatal!
-      sprintf(lcdString, "%.20s", "RS485 msg too long!");
-      LCD2004.send(lcdString);
-      Serial.println(lcdString);
-      endWithFlashingLED(1);
-    } else if (tBufLen > 60) {            // RS485 serial input buffer should never get this close to overflow.  Fatal!
-      sprintf(lcdString, "%.20s", "RS485 in buf ovrflw!");
-      LCD2004.send(lcdString);
-      Serial.println(lcdString);
-      endWithFlashingLED(1);
-    }
-    for (int i = 0; i < tMsgLen; i++) {   // Get the RS485 incoming bytes and put them in the tMsg[] byte array
-      tMsg[i] = Serial2.read();
-    }
-    if (tMsg[tMsgLen - 1] != calcChecksumCRC8(tMsg, tMsgLen - 1)) {   // Bad checksum.  Fatal!
-      sprintf(lcdString, "%.20s", "RS485 bad checksum!");
-      LCD2004.send(lcdString);
-      Serial.println(lcdString);
-      endWithFlashingLED(1);
-    }
-    // At this point, we have a complete and legit message with good CRC, which may or may not be for us.
-    digitalWrite(PIN_RS485_RX_LED, LOW);       // Turn off the receive LED
-    return true;
-  } else {     // We don't yet have an entire message in the incoming RS485 bufffer
-    return false;
-  }
-}
-
-byte calcChecksumCRC8(const byte data[], byte len) {
-  // Rev 6/26/16
-  // calcChecksumCRC8 returns the CRC-8 checksum to use or confirm.
-  // Used for RS485 messages
-  // Sample call: msg[msgLen - 1] = calcChecksumCRC8(msg, msgLen - 1);
-  // We will send (sizeof(msg) - 1) and make the LAST byte
-  // the CRC byte - so not calculated as part of itself ;-)
-  byte crc = 0x00;
-  while (len--) {
-    byte extract = *data++;
-    for (byte tempI = 8; tempI; tempI--) {
-      byte sum = (crc ^ extract) & 0x01;
-      crc >>= 1;
-      if (sum) {
-        crc ^= 0x8C;
-      }
-      extract >>= 1;
-    }
-  }
-  return crc;
-}
-
-*/
-
 void initializeFRAM1AndGetControlBlock() {
   // Rev 09/26/17: Initialize FRAM chip(s), get chip data and control block data including confirm
   // chip rev number matches code rev number.
@@ -772,6 +682,24 @@ void endWithFlashingLED(int numFlashes) {
   return;  // Will never get here due to above infinite loop
 }
 
+void chirp() {
+  // Rev 10/05/16
+  digitalWrite(PIN_SPEAKER, LOW);  // turn on piezo
+  delay(10);
+  digitalWrite(PIN_SPEAKER, HIGH);
+  return;
+}
+
+void requestEmergencyStop() {
+  // Rev 10/05/16
+  pinMode(PIN_HALT, OUTPUT);
+  digitalWrite(PIN_HALT, LOW);   // Pulling this low tells all Arduinos to HALT (including A-LEG)
+  delay(1000);
+  digitalWrite(PIN_HALT, HIGH);
+  pinMode(PIN_HALT, INPUT);
+  return;
+}
+
 void checkIfHaltPinPulledLow() {
   // Rev 10/29/16
   // Check to see if another Arduino, or Emergency Stop button, pulled the HALT pin low.
@@ -792,28 +720,10 @@ void checkIfHaltPinPulledLow() {
       Serial.println(lcdString);
       while (true) { }  // For a real halt, just loop forever.
     } else {
-      sprintf(lcdString,"False HALT detected.");
+      sprintf(lcdString, "False HALT detected.");
       LCD2004.send(lcdString);
       Serial.println(lcdString);
     }
   }
-  return;
-}
-
-void chirp() {
-  // Rev 10/05/16
-  digitalWrite(PIN_SPEAKER, LOW);  // turn on piezo
-  delay(10);
-  digitalWrite(PIN_SPEAKER, HIGH);
-  return;
-}
-
-void requestEmergencyStop() {
-  // Rev 10/05/16
-  pinMode(PIN_HALT, OUTPUT);
-  digitalWrite(PIN_HALT, LOW);   // Pulling this low tells all Arduinos to HALT (including A-LEG)
-  delay(1000);
-  digitalWrite(PIN_HALT, HIGH);
-  pinMode(PIN_HALT, INPUT);
   return;
 }

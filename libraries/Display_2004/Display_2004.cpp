@@ -1,11 +1,18 @@
 // Display_2004 handles display of messages from the modules to the 20-char, 4-line (2004) Digole LCD display.
-// Rev: 11/04/17
+// Rev: 04/19/18
 
 #include <Display_2004.h>
 
 Display_2004::Display_2004(HardwareSerial * hdwrSerial, unsigned long baud) {  // This is the constructor; not called until an instance is created
 
-  // hdwrSerial needs to be the address of Serial thru Serial3, and baud can be any legit baud rate such as 115200.
+  // DigoleSerialDisp is the name of the class in DigoleSerial.h/.cpp.
+  // Create a pointer variable of type "DigoleSerialDisp" that can point to a Digole display object instantiation.
+  DigoleSerialDisp * _display;  // A member field in the Display_2004 class that holds a pointer to a Digole object.
+  // Now that we have a pointer to a not-yet-created Digole LCD object, we need to instantiate the object.
+  // DigoleSerialDisp is the name of the Digole LCD class, and thus also the name of the constructor.
+  // Here is the Digole class constructor: DigoleSerialDisp(hdwrSerial *s, unsigned long baud) //UART set up
+  // hdwrSerial needs to be the address of Serial thru Serial3.
+  // baud can be any legit baud rate such as 115200.
   _display = new DigoleSerialDisp(hdwrSerial, baud);  // _display is a pointer to a DigoleSerialDisp type (which is itself an object)
   return;
 
@@ -25,7 +32,6 @@ void Display_2004::init() {
 }
 
 void Display_2004::send(const char nextLine[]) {
-
   // Display a line of information on the bottom line of the 2004 LCD display on the control panel, and scroll the old lines up.
   // Rev 10/20/17: Converted to OOP and rolled Digole class into this class.
   // INPUTS: nextLine[] is a char array, must be less than 20 chars plus null or system will trigger fatal error.

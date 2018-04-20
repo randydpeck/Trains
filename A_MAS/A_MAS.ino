@@ -1,9 +1,9 @@
-// A-MAS Rev: 03/22/18.
-char APPVERSION[21] = "A-MAS Rev. 03/22/18";
+char APPVERSION[21] = "A-MAS Rev. 04/20/18";
 
 // Include the following #define if we want to run the system with just the lower-level track.  Comment out to create records for both levels of track.
 #define SINGLE_LEVEL     // Comment this out for full double-level routes.  Use it for single-level route testing.
 
+// 04/20/18: Updating LCD class
 // 04/18/18: Changed line in RS485SendMessage back to original, as the bug was fixed by the vendor.
 // 03/22/18: Changed line in RS485SendMessage to: "Serial2.write((unsigned char*) tMsg, tMsg[0]);" to fix red squiggly in Serial2.write(), per Tim M.
 //           This seems to be a bug in an Arduino header file, so the fix may be eliminated at some point.  Also RS485SendMessage will get moved to 
@@ -222,37 +222,25 @@ char APPVERSION[21] = "A-MAS Rev. 03/22/18";
 
 #include <Train_Consts_Global.h>
 const byte THIS_MODULE = ARDUINO_MAS;  // Not sure if/where I will use this - intended if I call a common function but will this "global" be seen there?
-byte RS485MsgIncoming[RS485_MAX_LEN];  // No need to initialize contents
-byte RS485MsgOutgoing[RS485_MAX_LEN];
-
-char lcdString[LCD_WIDTH + 1];                   // Global array to hold strings sent to Digole 2004 LCD; last char is for null terminator.
-
-//#include <Train_Fns_Vars_Global.h>
 
 // We will start in MODE_UNDEFINED, STATE_STOPPED.  User must press illuminated Start button to start a mode.
-byte modeCurrent = MODE_UNDEFINED;
+byte modeCurrent  = MODE_UNDEFINED;
 byte stateCurrent = STATE_STOPPED;
 
-// *** SERIAL LCD DISPLAY: The following lines are required by the Digole serial LCD display, connected to serial port 1.
-//const byte LCD_WIDTH = 20;        // Number of chars wide on the 20x04 LCD displays on the control panel
-#define _Digole_Serial_UART_      // To tell compiler compile the serial communication only
-#include <DigoleSerial.h>
-DigoleSerialDisp LCDDisplay(&Serial1, 115200); //UART TX on arduino to RX on module
-//char lcdString[LCD_WIDTH + 1];    // Global array to hold strings sent to Digole 2004 LCD; last char is for null terminator.
+// *** SERIAL LCD DISPLAY CLASS:
+#include <Display_2004.h>                // Class in quotes = in the A_SWT directory; angle brackets = in the library directory.
+// Instantiate a Display_2004 object called "LCD2004".
+// Pass address of serial port to use (0..3) such as &Serial1, and baud rate such as 9600 or 115200.
+Display_2004 LCD2004(&Serial1, 115200);  // Instantiate 2004 LCD display "LCD2004."
+Display_2004 * ptrLCD2004;               // Pointer will be passed to any other classes that need to be able to write to the LCD display.
+char lcdString[LCD_WIDTH + 1];           // Global array to hold strings sent to Digole 2004 LCD; last char is for null terminator.
 
-// *** RS485 MESSAGES: Here are constants and arrays related to the RS485 messages
-// Note that the serial input buffer is only 64 bytes, which means that we need to keep emptying it since there
-// will be many commands between Arduinos, even though most may not be for THIS Arduino.  If the buffer overflows,
-// then we will be totally screwed up (but it will be apparent in the checksum.) (Not really applicable to A-MAS)
-// const byte RS485_MAX_LEN     = 20;    // buffer length to hold the longest possible RS485 message.  Just a guess.
-//       byte RS485MsgIncoming[RS485_MAX_LEN];  // No need to initialize contents
-//       byte RS485MsgOutgoing[RS485_MAX_LEN];
-// const byte RS485_LEN_OFFSET  =  0;    // first byte of message is always total message length in bytes
-// const byte RS485_TO_OFFSET   =  1;    // second byte of message is the ID of the Arduino the message is addressed to
-// const byte RS485_FROM_OFFSET =  2;    // third byte of message is the ID of the Arduino the message is coming from
-// Note also that the LAST byte of the message is a CRC8 checksum of all bytes except the last
-// const byte RS485_TRANSMIT    = HIGH;  // HIGH = 0x1.  How to set TX_CONTROL pin when we want to transmit RS485
-// const byte RS485_RECEIVE     = LOW;   // LOW = 0x0.  How to set TX_CONTROL pin when we want to receive (or NOT transmit) RS485
+// *** MESSAGE CLASS (RS485 and digital pin communications):
+#include <Message_MAS.h>
+Message_MAS Message(ptrLCD2004);         // Instantiate message object "Message"; requires a pointer to the 2004 LCD display
+byte MsgIncoming[RS485_MAX_LEN];         // Global array for incoming inter-Arduino messages.  No need to init contents.  Probably shouldn't call them "RS485" though.
+byte MsgOutgoing[RS485_MAX_LEN];         // No need to initialize contents.
+
 char occPrompt[9] = "        ";       // Stores a/n prompts sent to A-OCC, define here to avoid cross initialization error in switch stmt.
 
 // *** FRAM MEMORY MODULE:  Constants and variables needed for use with Hackscribble Ferro RAM.
@@ -264,9 +252,9 @@ char occPrompt[9] = "        ";       // Stores a/n prompts sent to A-OCC, defin
 // To create an instance of FRAM, we specify a name, the FRAM part number, and our SS pin number, i.e.:
 //    Hackscribble_Ferro FRAM1(MB85RS64, PIN_FRAM1);
 // Control buffer in each FRAM is first 128 bytes (address 0..127) reserved for any special purpose we want such as config info.
-#include <SPI.h>
-#include <Hackscribble_Ferro.h>
-const unsigned int FRAM_CONTROL_BUF_SIZE = 128;  // This defaults to 64 bytes in the library, but we modified it
+#include <SPI.h>                                    // FRAM uses SPI communications
+#include <Hackscribble_Ferro.h>                     // FRAM library
+const unsigned int FRAM_CONTROL_BUF_SIZE = 128;     // This defaults to 64 bytes in the library, but we modified it
 // FRAM1 stores the Route Reference, Park 1 Reference, and Park 2 Reference tables.
 // FRAM1 control block (first 128 bytes):
 // Address 0..2 (3 bytes)   = Version number month, date, year i.e. 07, 13, 16
@@ -2091,6 +2079,8 @@ void checkIfHaltPinPulledLow() {
   if (digitalRead(PIN_HALT) == LOW) {   // See if it lasts a while
     delay(1);  // Pause to let a spike resolve
     if (digitalRead(PIN_HALT) == LOW) {  // If still low, we have a legit Halt, not a neg voltage spike
+
+
       chirp();
       sprintf(lcdString, "%.20s", "HALT pin low!  End.");
       sendToLCD(lcdString);
