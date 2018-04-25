@@ -1,4 +1,3 @@
-// A_OCC Rev: 12/03/17.
 char APPVERSION[21] = "A-OCC Rev. 12/03/17";
 
 // Include the following #define if we want to run the system with just the lower-level track.
@@ -21,8 +20,9 @@ char APPVERSION[21] = "A-OCC Rev. 12/03/17";
 // In REGISTER mode, all occupied blocks except the one being identified (by train name/number) will be SOLID BLUE,
 //   and the train at the block being identified (prompted) will be BLINKING RED.  No need for the operator to know/see
 //   which occupied blocks have/haven't been ID'd yet, because we won't stop prompting until all have been ID'd.
-// In AUTO and PARK mode, all non-selected (by rotary encoder to ID train name/number) blocks will be BLUE.
-//   Non-selected reserved routes will be SOLID BLUE, and the block(s) with the train in it (the tail) will be BLINKING BLUE.
+//   Maybe we should put out the LEDs as each train is registered, so operator can see how many are remaining.
+// In AUTO and PARK mode, all non-selected (by rotary encoder to ID train name/number) reserved and occupied blocks will be BLUE.
+//   Non-selected reserved routes will be SOLID BLUE, and the block(s) with the train in it (to the tail) will be BLINKING BLUE.
 //   The selected (by rotary encoder to ID the train name/number) train's reserved route will be SOLID RED, and the block(s)
 //   with the selected train in it (the tail) will be BLINKING RED.
 

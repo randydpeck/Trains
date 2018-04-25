@@ -1,5 +1,6 @@
-// A_LED Rev: 12/03/17.
-char APPVERSION[21] = "A-LED Rev. 12/03/17";
+char APPVERSION[21] = "A-LED Rev. 04/22/18";
+#include <Train_Consts_Global.h>
+const byte THIS_MODULE = ARDUINO_BTN;  // Not sure if/where I will use this - intended if I call a common function but will this "global" be seen there?
 
 // Include the following #define if we want to run the system with just the lower-level track.
 #define SINGLE_LEVEL     // Comment this out for full double-level routes.  Use it for single-level route testing.
@@ -23,6 +24,7 @@ char APPVERSION[21] = "A-LED Rev. 12/03/17";
 // Note that HEAD == TAIL *both* when the buffer is empty and when full, so we use COUNT as the test for full/empty status.
 
 // IMPORTANT: LARGE AMOUNTS OF THIS CODE ARE IDENTIAL IN A-SWT, SO ALWAYS UPDATE A-SWT WHEN WE MAKE CHANGES TO THIS CODE.
+// 04/22/18: Updating new global const, message and LCD display classes.
 // 09/16/17: Changed variable suffixes from Length to Len, No/Number to Num, Record to Rec, etc.
 // 08/29/17: Cleaning up code, updated RS485 message protocol comments.
 // 02/26/17: Added mode and state changed = false at top of get RS485 message main loop
@@ -81,8 +83,8 @@ char APPVERSION[21] = "A-LED Rev. 12/03/17";
 
 // **************************************************************************************************************************
 
-#include <Train_Consts_Global.h>
-const byte THIS_MODULE = ARDUINO_BTN;  // Not sure if/where I will use this - intended if I call a common function but will this "global" be seen there?
+#include <Message_LED.h>
+
 byte RS485MsgIncoming[RS485_MAX_LEN];  // No need to initialize contents
 byte RS485MsgOutgoing[RS485_MAX_LEN];
 

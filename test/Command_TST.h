@@ -33,20 +33,22 @@
 //    4	  Button No.Byte  1..32
 //    5	  Checksum	Byte  0..255
 
-#ifndef _MESSAGE_BTN_h
-#define _MESSAGE_BTN_h
+#ifndef _COMMAND_TST_h
+#define _COMMAND_TST_h
 
-#include <Message_RS485.h>
+#include <Command_RS485.h>
 #include <Train_Consts_Global.h>
 
 const byte RS485_BUTTON_NO_OFFSET = 4;    // Offset into RS485 message where button no. that was pressed is stored
 
-class Message_BTN : public Message_RS485 {
+class Command_TST : public Command_RS485 {
 
   public:
 
     // Constructor:
-    Message_BTN(HardwareSerial * hdwrSerial, Display_2004 * LCD2004);
+    Command_TST(HardwareSerial * hdwrSerial, long unsigned int baud, Display_2004 * LCD2004);
+
+    void Init();
 
     // Receive returns true or false, depending if a complete message was read.
     // tmsg[] is also "returned" by the function (populated, iff there was a complete message) since arrays are passed by reference.

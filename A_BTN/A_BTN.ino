@@ -1,11 +1,13 @@
-// A_BTN Rev: 10/01/17.  
-char APPVERSION[21] = "A-BTN Rev. 10/01/17";
+#include <Train_Consts_Global.h>
+char APPVERSION[LCD_WIDTH + 1] = "A-BTN Rev. 10/01/17";
+const byte THIS_MODULE = ARDUINO_BTN;  // Not sure if/where I will use this - intended if I call a common function but will this "global" be seen there?
 
 // A_BTN watches for control panel pushbutton presses by operator, and transmits that info to A_MAS.
 // This is an "OUTPUT-ONLY" module that does not monitor or respond to any other Arduino (it does watch for A-MAS mode changes.)
 // A_BTN is only active when the system is in Manual mode, Running state.  Turnout button presses are ignored during all other
 // modes and states.  P.O.V. support can be added later if relevant.
 
+// 04/22/18: Updating new global const, message and LCD display classes.
 // 09/16/17: Brought a lot of loop code out to functions; much streamlining, variable re-naming.
 // 09/13/17: Changed variable suffixes and constant names for better programming form.
 // 08/28/17: Const LCD width, converted some inline loop code to functions, added RS485 protocol comments, and other clean-up.
@@ -53,26 +55,23 @@ char APPVERSION[21] = "A-BTN Rev. 10/01/17";
 
 // **************************************************************************************************************************
 
-#include <Train_Consts_Global.h>
-const byte THIS_MODULE = ARDUINO_BTN;  // Not sure if/where I will use this - intended if I call a common function but will this "global" be seen there?
-
 // We will start in MODE_UNDEFINED, STATE_STOPPED.  We must receive a message from A-MAS to tell us otherwise.
 byte modeCurrent  = MODE_UNDEFINED;
 byte stateCurrent = STATE_STOPPED;
                               
 // *** SERIAL LCD DISPLAY CLASS:
-#include <Display_2004.h>                // Class in quotes = in the A_SWT directory; angle brackets = in the library directory.
+#include <Display_2004.h>                   // Class in quotes = in the A_SWT directory; angle brackets = in the library directory.
 // Instantiate a Display_2004 object called "LCD2004".
 // Pass address of serial port to use (0..3) such as &Serial1, and baud rate such as 9600 or 115200.
-Display_2004 LCD2004(&Serial1, 115200);  // Instantiate 2004 LCD display "LCD2004."
-Display_2004 * ptrLCD2004;               // Pointer will be passed to any other classes that need to be able to write to the LCD display.
-char lcdString[LCD_WIDTH + 1];                   // Global array to hold strings sent to Digole 2004 LCD; last char is for null terminator.
+Display_2004 LCD2004(&Serial1, 9600);     // Instantiate 2004 LCD display "LCD2004."
+Display_2004 * ptrLCD2004;                  // Pointer will be passed to any other classes that need to be able to write to the LCD display.
+char lcdString[LCD_WIDTH + 1];              // Global array to hold strings sent to Digole 2004 LCD; last char is for null terminator.
 
-// *** MESSAGE CLASS (RS485 and digital pin communications):
+// *** MESSAGE CLASS (Inter-Arduino communications):
 #include <Message_BTN.h>
-Message_BTN Message(ptrLCD2004);         // Instantiate message object "Message"; requires a pointer to the 2004 LCD display
-byte MsgIncoming[RS485_MAX_LEN];         // Global array for incoming inter-Arduino messages.  No need to init contents.  Probably shouldn't call them "RS485" though.
-byte MsgOutgoing[RS485_MAX_LEN];         // No need to initialize contents.
+Message_BTN Message(&Serial2, ptrLCD2004);  // Instantiate message object "Message"; requires a pointer to the hardware serial port, and the 2004 LCD display
+byte MsgIncoming[RS485_MAX_LEN];            // Global array for incoming inter-Arduino messages.  No need to init contents.  Probably shouldn't call them "RS485" though.
+byte MsgOutgoing[RS485_MAX_LEN];            // No need to initialize contents.
 
 // *** SHIFT REGISTER: The following lines are required by the Centipede input/output shift registers.
 #include <Wire.h>                 // Needed for Centipede shift register
@@ -90,17 +89,22 @@ const unsigned long RELEASE_DELAY_MS = 200;  // Force operator to wait this many
 
 void setup() {
 
+  LCD2004.init();                       // Initialize the 20 x 04 Digole serial LCD display
+  delay(1000);
   Serial.begin(115200);                 // PC serial monitor window
   // Serial1 is for the Digole 20x4 LCD debug display, already set up
-  Serial2.begin(115200);                // RS485  up to 115200
+  Serial2.begin(115200);                // RS485  up to 115200 ********** THIS SHOULD BE MOVED INTO Message_RS485.h/.cpp and commented out here
   Wire.begin();                         // Start I2C for Centipede shift register
   shiftRegister.initialize();           // Set all registers to default
   initializeShiftRegisterPins();        // Set all Centipede shift register pins to INPUT for monitoring button presses
   initializePinIO();                    // Initialize all of the I/O pins and turn all LEDs on control panel off
-  LCD2004.init();                       // Initialize the 20 x 04 Digole serial LCD display
+  
   sprintf(lcdString, APPVERSION);       // Display the application version number on the LCD display
-  LCD2004.send(lcdString);
   Serial.println(lcdString);
+  LCD2004.send(lcdString);
+
+
+  Message.Hello();
 
 }
 

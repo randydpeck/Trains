@@ -1,27 +1,22 @@
-// Message_BTN is a child class of Message_RS485: it handles the construction/deconstruction of message fields
+// Message_LED is a child class of Message_RS485: it handles the construction/deconstruction of message fields
 // Rev: 04/20/18
 
-#include <Message_BTN.h>
+#include <Message_LED.h>
 
-// xxxxxxxxxx  Because A_SWT only receives messages and does not send any, this class does not include any "send" logic.
-// xxxxxxxxxxxx Because A_SWT does not send or receive any digital messages (i.e. Arduino pins), this class does not include that logic either.
-// A_BTN both sends and receives RS485 messages, and also needs to send a digital signal.
+// A_LED ??? sends and receives RS485 messages, and also needs to read a digital signal.
 
 // Here is how you call the Parent constructor from the child constructor, passing it the parameter(s) it needs.
-Message_BTN::Message_BTN(HardwareSerial * hdwrSerial, Display_2004 * LCD2004) : Message_RS485(mySerial, myLCD, myModuleID)
+Message_LED::Message_LED(Display_2004 * LCD2004) : Message_RS485(myModuleID, myLCD)
 {
-
-  mySerial = hdwrSerial;
-
-  myLCD = LCD2004;  // Thinking we may not want to be writing messages to the LCD from inside this class...???
-                    // MessageRS485(myModuleID, myLCD);
 
   myModuleID = THIS_MODULE;  // This could probably simply be set as const byte myModuleID = ARDUINO_BTN (global const)
                              // After all, why pass it if this child class is unique to this module?
 
+  myLCD = LCD2004;  // Thinking we may not want to be writing messages to the LCD from inside this class...???
+                    // MessageRS485(myModuleID, myLCD);
 }
 
-bool Message_BTN::Receive(byte tMsg[]) {
+bool Message_LED::Receive(byte tMsg[]) {
 
   // Try to retrieve a complete incoming message.  
   // Return false if 1) There was no message; or 2) The message is not one that this module cares about.
@@ -32,9 +27,11 @@ bool Message_BTN::Receive(byte tMsg[]) {
 
   // Okay, there was a real message found and it's stored in tMsg[].
   // Decide if it's a message that this module even cares about, based on From, To, and Message type.
-  // A_BTN only cares about two incoming messages:
-  //   A_LEG to ALL Mode broadcase
-  //   A_LEG to A_BTN "send the button number that was just pressed."
+  // A_MSG cares about these incoming messages (which is at this time, ALL incoming messages):
+  //   A_xxx to ALL Mode broadcase
+  //   A_xxx to A_BTN "send the button number that was just pressed."
+  //   ********
+  // THIS IS WRONG
 
   if ((tMsg[RS485_TO_OFFSET] == ARDUINO_ALL) && (tMsg[RS485_FROM_OFFSET] == ARDUINO_MAS) && (tMsg[RS485_TYPE_OFFSET] == 'M')) {
     return true;  // It's a Mode change broadcast message
@@ -46,14 +43,17 @@ bool Message_BTN::Receive(byte tMsg[]) {
 
 }
 
-void Message_BTN::Send(byte tMsg[]) {
+void Message_LED::Send(byte tMsg[]) {
 
   Message_RS485::RS485SendMessage(tMsg);
   return;
  
 }
 
-void Message_BTN::SetButtonNo(byte tMsg[], byte button) {  // Inserts button number into the appropriate byte
+/*
+// This is copied from Message_BTN as an example of setting a particular field in the message byte array...
+void Message_MAS::SetButtonNo(byte tMsg[], byte button) {  // Inserts button number into the appropriate byte
   tMsg[RS485_BUTTON_NO_OFFSET] = button;
   return;
 }
+*/

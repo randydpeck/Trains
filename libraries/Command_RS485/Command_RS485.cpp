@@ -1,30 +1,41 @@
-// Message_RS485 is the base class that handles both RS485 and digital-pin communications.
-// Rev: 04/20/18
+// Rev: 04/22/18
+// Command_RS485 is the base class that handles RS485 communications, always via Serial 2.
 
-#include <Message_RS485.h>
+#include <Command_RS485.h>
 
-Message_RS485::Message_RS485(byte ID, Display_2004 * LCD2004)
+Command_RS485::Command_RS485(HardwareSerial * hdwrSerial, long unsigned int baud, Display_2004 * LCD2004)  // Constructor
 {
-   myModuleID = ID;
-   myLCD = LCD2004;
+  mySerial = hdwrSerial;  // Pointer to the serial port we want to use for RS485
+  myBaud = baud;          // Serial port baud rate
+  myLCD = LCD2004;        // Pointer to the LCD display for error messages
 }
 
-bool Message_RS485::RS485GetMessage(byte tMsg[]) {
-  // 10/19/16: Updated string handling for sendToLCD and Serial.print.
-  // 10/1/16: Returns true or false, depending if a complete message was read.
+void Command_RS485::InitPort() {
+
+  sprintf(lcdString, "485 baud %6lu", myBaud);  // TESTING PURPOSES ONLY
+  myLCD->send(lcdString);
+  Serial.println(lcdString);
+
+  // Initialize the serial port that this object will be using...
+  mySerial->begin(myBaud);
+
+}
+
+bool Command_RS485::RS485GetMessage(byte tMsg[]) {
+  // Returns true or false, depending if a complete message was read.
+  // If this function returns true, then we are guaranteed to have a real/accurate message in the buffer, including good CRC.
+  // However, this function does not check if it is to "us" (this Arduino) or not.  That's because 1) the child class will do that,
+  // and because some modules snoop the messages, and act even if the message isn't addressed to them.
+  // tmsg[] is also "returned" by the function since arrays are automatically passed by reference.
   // If the whole message is not available, tMsg[] will not be affected, so ok to call any time.
   // Does not require any data in the incoming RS485 serial buffer when it is called.
   // Detects incoming serial buffer overflow and fatal errors.
-  // If there is a fatal error, call endWithFlashingLED() which itself attempts to invoke an emergency stop.
-  // This only reads and returns one complete message at a time, regardless of how much more data
-  // may be waiting in the incoming RS485 serial buffer.
+  // If there is a fatal error, calls endWithFlashingLED() (in calling module, so it can also invoke emergency stop if applicable.)
+  // This only reads and returns one complete message at a time, regardless of how much more data may be in the incoming buffer.
   // Input byte tmsg[] is the initialized incoming byte array whose contents may be filled.
-  // tmsg[] is also "returned" by the function since arrays are passed by reference.
-  // If this function returns true, then we are guaranteed to have a real/accurate message in the
-  // buffer, including good CRC.  However, the function does not check if it is to "us" (this Arduino) or not.
-  // That's because some modules snoop the messages, and act even if the message isn't addressed to them.
-  byte tMsgLen = Serial2.peek();     // First byte will be message length
-  byte tBufLen = Serial2.available();  // How many bytes are waiting?  Size is 64.
+  
+  byte tMsgLen = mySerial->peek();     // First byte will be message length
+  byte tBufLen = mySerial->available();  // How many bytes are waiting?  Size is 64.
   if (tBufLen >= tMsgLen) {  // We have at least enough bytes for a complete incoming message
     digitalWrite(PIN_RS485_RX_LED, HIGH);       // Turn on the receive LED
     if (tMsgLen < 5) {                 // Message too short to be a legit message.  Fatal!
@@ -44,7 +55,7 @@ bool Message_RS485::RS485GetMessage(byte tMsg[]) {
       endWithFlashingLED(1);
     }
     for (int i = 0; i < tMsgLen; i++) {   // Get the RS485 incoming bytes and put them in the tMsg[] byte array
-      tMsg[i] = Serial2.read();
+      tMsg[i] = mySerial->read();
     }
     if (tMsg[tMsgLen - 1] != calcChecksumCRC8(tMsg, tMsgLen - 1)) {   // Bad checksum.  Fatal!
       sprintf(lcdString, "%.20s", "RS485 bad checksum!");
@@ -60,25 +71,25 @@ bool Message_RS485::RS485GetMessage(byte tMsg[]) {
   }
 }
 
-void Message_RS485::RS485SendMessage(byte tMsg[]) {
+void Command_RS485::RS485SendMessage(byte tMsg[]) {
   
-  // 10/1/16: Updated from 9/12/16 to write entire message as single Serial2.write(msg,len) command.
+  // 10/1/16: Updated from 9/12/16 to write entire message as single mySerial->write(msg,len) command.
   // This routine must *only* be called when an entire message is ready to write, not a byte at a time.
   // This version, as part of the RS485 message class, automatically calculates and adds the CRC checksum.
   digitalWrite(PIN_RS485_TX_LED, HIGH);       // Turn on the transmit LED
   digitalWrite(PIN_RS485_TX_ENABLE, RS485_TRANSMIT);  // Turn on transmit mode
   byte tMsgLen = GetLen(tMsg);
   tMsg[tMsgLen - 1] = calcChecksumCRC8(tMsg, tMsgLen - 1);  // Insert the checksum into the message
-  Serial2.write(tMsg, tMsgLen);  // flush() makes it impossible to overflow the outgoing serial buffer, which CAN happen in my test code.
+  mySerial->write(tMsg, tMsgLen);  // flush() makes it impossible to overflow the outgoing serial buffer, which CAN happen in my test code.
                                  // Although it is BLOCKING code, we'll use it at least for now.  Output buffer overflow is unpredictable without it.
                                  // Alternative would be to check available space in the outgoing serial buffer and stop on overflow, but how?
-  Serial2.flush();               // wait for transmission of outgoing serial data to complete.  Takes about 0.1ms/byte.
+  mySerial->flush();               // wait for transmission of outgoing serial data to complete.  Takes about 0.1ms/byte.
   digitalWrite(PIN_RS485_TX_ENABLE, RS485_RECEIVE);  // receive mode
   digitalWrite(PIN_RS485_TX_LED, LOW);       // Turn off the transmit LED
   return;
 }
 
-byte Message_RS485::calcChecksumCRC8(const byte data[], byte len) {
+byte Command_RS485::calcChecksumCRC8(const byte data[], byte len) {
 
   // Rev 6/26/16
   // calcChecksumCRC8 returns the CRC-8 checksum to use or confirm.
@@ -101,38 +112,38 @@ byte Message_RS485::calcChecksumCRC8(const byte data[], byte len) {
   return crc;
 }
 
-byte Message_RS485::GetLen(byte tMsg[]) {
+byte Command_RS485::GetLen(byte tMsg[]) {
   return tMsg[RS485_LEN_OFFSET];
 }
 
-byte Message_RS485::GetTo(byte tMsg[]) {
+byte Command_RS485::GetTo(byte tMsg[]) {
   return tMsg[RS485_TO_OFFSET];
 }
 
-byte Message_RS485::GetFrom(byte tMsg[]) {
+byte Command_RS485::GetFrom(byte tMsg[]) {
   return tMsg[RS485_FROM_OFFSET];
 }
 
-char Message_RS485::GetType(byte tMsg[]) {
+char Command_RS485::GetType(byte tMsg[]) {
   return tMsg[RS485_TYPE_OFFSET];
 }
 
-void Message_RS485::SetLen(byte tMsg[], byte len) {
+void Command_RS485::SetLen(byte tMsg[], byte len) {
   tMsg[RS485_LEN_OFFSET] = len;
   return;
 }
 
-void Message_RS485::SetTo(byte tMsg[], byte to) {
+void Command_RS485::SetTo(byte tMsg[], byte to) {
   tMsg[RS485_TO_OFFSET] = to;
   return;
 }
 
-void Message_RS485::SetFrom(byte tMsg[], byte from) {
+void Command_RS485::SetFrom(byte tMsg[], byte from) {
   tMsg[RS485_FROM_OFFSET] = from;
   return;
 }
 
-void Message_RS485::SetType(byte tMsg[], char type) {
+void Command_RS485::SetType(byte tMsg[], char type) {
   tMsg[RS485_TYPE_OFFSET] = type;
   return;
 }

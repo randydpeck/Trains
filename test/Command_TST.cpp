@@ -1,34 +1,36 @@
-// Message_BTN is a child class of Message_RS485: it handles the construction/deconstruction of message fields
+// Command_TST is a child class of Message_RS485: it handles the construction/deconstruction of message fields
 // Rev: 04/20/18
 
-#include <Message_BTN.h>
+#include <Command_TST.h>
 
 // xxxxxxxxxx  Because A_SWT only receives messages and does not send any, this class does not include any "send" logic.
 // xxxxxxxxxxxx Because A_SWT does not send or receive any digital messages (i.e. Arduino pins), this class does not include that logic either.
 // A_BTN both sends and receives RS485 messages, and also needs to send a digital signal.
 
 // Here is how you call the Parent constructor from the child constructor, passing it the parameter(s) it needs.
-Message_BTN::Message_BTN(HardwareSerial * hdwrSerial, Display_2004 * LCD2004) : Message_RS485(mySerial, myLCD, myModuleID)
-{
+Command_TST::Command_TST(HardwareSerial * hdwrSerial, long unsigned int baud, Display_2004 * LCD2004) : Command_RS485(hdwrSerial, baud, LCD2004) {
 
-  mySerial = hdwrSerial;
+  mySerial = hdwrSerial;  // Pointer to the serial port we want to use for RS485 (probably not needed here)
+  myBaud = baud;          // Serial port baud rate (probably not needed here)
+  myLCD = LCD2004;        // Pointer to the LCD display for error messages (possibly not needed here)
+  
+}
 
-  myLCD = LCD2004;  // Thinking we may not want to be writing messages to the LCD from inside this class...???
-                    // MessageRS485(myModuleID, myLCD);
+void Command_TST::Init() {
 
-  myModuleID = THIS_MODULE;  // This could probably simply be set as const byte myModuleID = ARDUINO_BTN (global const)
-                             // After all, why pass it if this child class is unique to this module?
+  Command_RS485::InitPort();
+  return;
 
 }
 
-bool Message_BTN::Receive(byte tMsg[]) {
+bool Command_TST::Receive(byte tMsg[]) {
 
   // Try to retrieve a complete incoming message.  
   // Return false if 1) There was no message; or 2) The message is not one that this module cares about.
   // Return true if there was a complete message *and* it's one that we want to see.
 
   // First see if there is a valid message of any type...
-  if ((Message_RS485::RS485GetMessage(tMsg)) == false) return false;
+  if ((Command_RS485::RS485GetMessage(tMsg)) == false) return false;
 
   // Okay, there was a real message found and it's stored in tMsg[].
   // Decide if it's a message that this module even cares about, based on From, To, and Message type.
@@ -46,14 +48,14 @@ bool Message_BTN::Receive(byte tMsg[]) {
 
 }
 
-void Message_BTN::Send(byte tMsg[]) {
+void Command_TST::Send(byte tMsg[]) {
 
-  Message_RS485::RS485SendMessage(tMsg);
+  Command_RS485::RS485SendMessage(tMsg);
   return;
  
 }
 
-void Message_BTN::SetButtonNo(byte tMsg[], byte button) {  // Inserts button number into the appropriate byte
+void Command_TST::SetButtonNo(byte tMsg[], byte button) {  // Inserts button number into the appropriate byte
   tMsg[RS485_BUTTON_NO_OFFSET] = button;
   return;
 }

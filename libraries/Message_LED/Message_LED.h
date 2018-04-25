@@ -1,7 +1,13 @@
 // Rev: 04/20/18
-// Message_BTN is a child class of Message_RS485.
+// Message_LED is a child class of Message_RS485.
 
-// *** RS485 MESSAGE PROTOCOLS used by A-BTN.  Byte numbers represent offsets, so they start at zero. ***
+// *** RS485 MESSAGE PROTOCOLS used by A-MAS.  Byte numbers represent offsets, so they start at zero. ***
+
+
+
+
+// this is all wrong...
+
 
 // A-MAS BROADCAST: Mode change.  We care about mode because we only look for control panel turnout button presses while in Manual mode, Running state.
 // Rev: 08/31/17
@@ -33,20 +39,20 @@
 //    4	  Button No.Byte  1..32
 //    5	  Checksum	Byte  0..255
 
-#ifndef _MESSAGE_BTN_h
-#define _MESSAGE_BTN_h
+#ifndef _MESSAGE_LED_h
+#define _MESSAGE_LED_h
 
 #include <Message_RS485.h>
 #include <Train_Consts_Global.h>
 
-const byte RS485_BUTTON_NO_OFFSET = 4;    // Offset into RS485 message where button no. that was pressed is stored
+const byte RS485_BUTTON_NO_OFFSET = 4;    // WAS USED BY MESSAGE BTN, NEED SIMILAR ONES I'M SURE FOR MAS Offset into RS485 message where button no. that was pressed is stored
 
-class Message_BTN : public Message_RS485 {
+class Message_LED : public Message_RS485 {
 
   public:
 
     // Constructor:
-    Message_BTN(HardwareSerial * hdwrSerial, Display_2004 * LCD2004);
+    Message_LED(Display_2004 * LCD2004);
 
     // Receive returns true or false, depending if a complete message was read.
     // tmsg[] is also "returned" by the function (populated, iff there was a complete message) since arrays are passed by reference.
@@ -56,7 +62,7 @@ class Message_BTN : public Message_RS485 {
     void Send(byte tMsg[]);
 
     // Function unique to A_BTN, inserts byte button number pressed into the outgoing message byte array
-    void SetButtonNo(byte tMsg[], byte button);  // Inserts button number into the appropriate byte
+//    void SetButtonNo(byte tMsg[], byte button);  // Inserts button number into the appropriate byte
 
   private:
 

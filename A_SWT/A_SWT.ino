@@ -1,5 +1,8 @@
-// A_SWT Rev: 04/19/18.
 char APPVERSION[21] = "A-SWT Rev. 04/19/18";
+#include <Train_Consts_Global.h>
+const byte THIS_MODULE = ARDUINO_SWT;  // Not sure if/where I will use this - intended if I call a common function but will this "global" be seen there?
+
+#include <avr/wdt.h>     // Required to call wdt_reset() for watchdog timer for turnout solenoids
 
 // Include the following #define if we want to run the system with just the lower-level track.
 #define SINGLE_LEVEL     // Comment this out for full double-level routes.  Use it for single-level route testing.
@@ -8,7 +11,7 @@ char APPVERSION[21] = "A-SWT Rev. 04/19/18";
 // This is an "INPUT-ONLY" module that does not provide data to any other Arduino.
 
 // IMPORTANT: LARGE AMOUNTS OF THIS CODE ARE IDENTIAL IN A-LED, SO ALWAYS UPDATE A-LED WHEN WE MAKE CHANGES TO THIS CODE.
-// 04/19/18: Lots of changes to use new const, message, and 2004 LCD objects.
+// 04/22/18: Updating new global const, message and LCD display classes.
 // 09/16/17: Changed variable suffixes from Length to Len, No/Number to Num, Record to Rec, etc.
 // 11/01/16: checkIfHaltPulledLow(), if it was and we needed to halt, was not releasing the relays and thus could lock ON a solenoid!
 // 11/01/16: Also re-wrote watchdog timer to release relays under any circumstances if left on for more than 1/2 second or whatever.
@@ -64,10 +67,6 @@ char APPVERSION[21] = "A-SWT Rev. 04/19/18";
 
 // **************************************************************************************************************************
 
-#include <Train_Consts_Global.h>
-const byte THIS_MODULE = ARDUINO_SWT;  // Not sure if/where I will use this - intended if I call a common function but will this "global" be seen there?
-
-#include <avr/wdt.h>     // Required to call wdt_reset() for watchdog timer for turnout solenoids
 
 
 
@@ -79,7 +78,7 @@ Display_2004 LCD2004(&Serial1, 115200);  // Instantiate 2004 LCD display "LCD200
 Display_2004 * ptrLCD2004;               // Pointer will be passed to any other classes that need to be able to write to the LCD display.
 char lcdString[LCD_WIDTH + 1];           // Global array to hold strings sent to Digole 2004 LCD; last char is for null terminator.
 
-// *** MESSAGE CLASS (RS485 and digital pin communications):
+// *** RS485/DIGITAL MESSAGE CLASS (Inter-Arduino communications):
 #include <Message_SWT.h>                 // Class includes all messages sent and received by A_SWT, including parent messages.
 Message_SWT Message(ptrLCD2004);         // Instantiate message object "Message"; requires a pointer to the 2004 LCD display
 byte MsgIncoming[RS485_MAX_LEN];         // Global array for incoming inter-Arduino messages.  No need to init contents.  Probably shouldn't call them "RS485" though.
