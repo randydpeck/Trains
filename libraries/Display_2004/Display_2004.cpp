@@ -1,7 +1,7 @@
 // Rev: 04/25/18
 // Display_2004 handles display of messages from the modules to the 20-char, 4-line (2004) Digole LCD display.
 
-#include <Display_2004.h>
+#include "Display_2004.h"
 
 //Display_2004::Display_2004(HardwareSerial * hdwrSerial, long unsigned int baud) {  // Constructor for methods 1 or 2
 Display_2004::Display_2004(DigoleSerialDisp * DigoleLCD) {  // Constructor for method 3

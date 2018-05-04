@@ -1,10 +1,9 @@
-// Rev: 04/22/18
-// Command_RS485 is the base class that handles RS485 communications, always via Serial 2.
+// Rev: 05/03/18
+// Command_RS485 handles RS485 (and maybe? digital-pin) communications, via a specified serial port.
 
-#include <Command_RS485.h>
+#include "Command_RS485.h"
 
-Command_RS485::Command_RS485(HardwareSerial * hdwrSerial, long unsigned int baud, Display_2004 * LCD2004)  // Constructor
-{
+Command_RS485::Command_RS485(HardwareSerial * hdwrSerial, long unsigned int baud, Display_2004 * LCD2004) {  // Constructor
   mySerial = hdwrSerial;  // Pointer to the serial port we want to use for RS485
   myBaud = baud;          // Serial port baud rate
   myLCD = LCD2004;        // Pointer to the LCD display for error messages

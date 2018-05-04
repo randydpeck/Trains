@@ -6,7 +6,7 @@
 #ifndef _DISPLAY_2004_H
 #define _DISPLAY_2004_H
 
-#include "Arduino.h"
+#include <Arduino.h>
 #include <Train_Consts_Global.h>
 
 // The following lines are required by the Digole serial LCD display, connected to an Arduino hardware serial port.
