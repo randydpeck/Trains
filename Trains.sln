@@ -25,14 +25,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		libraries\Command_TST\Command_TST.h = libraries\Command_TST\Command_TST.h
 		libraries\Display_2004\Display_2004.cpp = libraries\Display_2004\Display_2004.cpp
 		libraries\Display_2004\Display_2004.h = libraries\Display_2004\Display_2004.h
-		libraries\Message_BTN\Message_BTN.cpp = libraries\Message_BTN\Message_BTN.cpp
-		libraries\Message_BTN\Message_BTN.h = libraries\Message_BTN\Message_BTN.h
-		libraries\Message_LED\Message_LED.cpp = libraries\Message_LED\Message_LED.cpp
-		libraries\Message_LED\Message_LED.h = libraries\Message_LED\Message_LED.h
-		libraries\Message_MAS\Message_MAS.cpp = libraries\Message_MAS\Message_MAS.cpp
-		libraries\Message_MAS\Message_MAS.h = libraries\Message_MAS\Message_MAS.h
-		libraries\Message_SWT\Message_SWT.cpp = libraries\Message_SWT\Message_SWT.cpp
-		libraries\Message_SWT\Message_SWT.h = libraries\Message_SWT\Message_SWT.h
 		libraries\Train_Consts_Global\Train_Consts_Global.cpp = libraries\Train_Consts_Global\Train_Consts_Global.cpp
 		libraries\Train_Consts_Global\Train_Consts_Global.h = libraries\Train_Consts_Global\Train_Consts_Global.h
 	EndProjectSection

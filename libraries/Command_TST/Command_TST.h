@@ -1,7 +1,7 @@
-// Rev: 04/20/18
-// Message_BTN is a child class of Message_RS485.
+// Rev: 05/06/18
+// Command_TST is a child class of Message_RS485, and handles all RS485 and digital pin messages for test.ino.
 
-// *** RS485 MESSAGE PROTOCOLS used by A-BTN.  Byte numbers represent offsets, so they start at zero. ***
+// *** RS485 MESSAGE PROTOCOLS used by A-BTN (FOR TEST PURPOSES.)  Byte numbers represent offsets, so they start at zero. ***
 
 // A-MAS BROADCAST: Mode change.  We care about mode because we only look for control panel turnout button presses while in Manual mode, Running state.
 // Rev: 08/31/17
@@ -33,13 +33,11 @@
 //    4	  Button No.Byte  1..32
 //    5	  Checksum	Byte  0..255
 
-#ifndef _COMMAND_TST_h
-#define _COMMAND_TST_h
+#ifndef COMMAND_TST_h
+#define COMMAND_TST_h
 
 #include <Command_RS485.h>
 #include <Train_Consts_Global.h>
-
-const byte RS485_BUTTON_NO_OFFSET = 4;    // Offset into RS485 message where button no. that was pressed is stored
 
 class Command_TST : public Command_RS485 {
 
@@ -50,19 +48,33 @@ class Command_TST : public Command_RS485 {
 
     void Init();
 
-    // Receive returns true or false, depending if a complete message was read.
-    // tmsg[] is also "returned" by the function (populated, iff there was a complete message) since arrays are passed by reference.
-    bool Receive(byte tMsg[]);
-
-    // Checksum is automatically calcualted and inserted at the end of the message
     void Send(byte tMsg[]);
+    // Generic send.  Checksum is automatically calcualted and inserted at the end of the message.
 
-    // Function unique to A_BTN, inserts byte button number pressed into the outgoing message byte array
-    void SetButtonNo(byte tMsg[], byte button);  // Inserts button number into the appropriate byte
+    bool Receive(byte tMsg[]);
+    // Generic receive.  Returns true or false, depending if a complete message was read.
+    // tmsg[] is also "returned" by the function (populated, iff there was a complete message) since arrays are passed by reference.
+
+    void SendTurnoutButtonPress(const byte button);
+    // A_BTN: Send a button press message to A_MAS, including manage digital RTS signal.
+
+    byte GetTurnoutButtonPress();
+    // A_MAS: Returns 0 if A_BTN isn't asking to send us any button presses; else returns button number that was pressed.
+
 
   private:
 
+    void SetTurnoutButtonNum(byte tMsg[], const byte button);  // Inserts button number into the appropriate byte
+    // A_BTN (private): Inserts byte button number pressed into the outgoing message byte array
+
+
+    byte GetTurnoutButtonNum(byte tMsg[]);
+    // A_MAS (private): Extracts button number from message sent by A_BTN to A_MAS with latest button press
+
+
 };
+
+extern void checkIfHaltPinPulledLow();
 
 #endif
 

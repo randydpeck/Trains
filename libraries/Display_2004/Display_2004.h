@@ -1,12 +1,12 @@
 // Rev: 04/22/18
 // Display_2004 handles display of messages from the modules to the 20-char, 4-line (2004) Digole LCD display.
+
 // It simplifies use of the LCD display by encapsulating all of the initialization and scrolling logic within the class.
 // Note that Display_2004 is neither a parent nor a child of the DigoleSerial object; it simply uses that object.
 
-#ifndef _DISPLAY_2004_H
-#define _DISPLAY_2004_H
+#ifndef DISPLAY_2004_H
+#define DISPLAY_2004_H
 
-#include <Arduino.h>
 #include <Train_Consts_Global.h>
 
 // The following lines are required by the Digole serial LCD display, connected to an Arduino hardware serial port.
@@ -18,23 +18,24 @@ class Display_2004
 {
   public:
 
-    Display_2004(DigoleSerialDisp * myDisp);  // Constructor.
+    Display_2004(DigoleSerialDisp * myDisp);
+    // Constructor.
 
-    // init() initializes the Digole serial LCD display, including a brief pause required before being used.
     void init();
+    // init() initializes the Digole serial LCD display, including a brief pause required before being used.
 
+    void send(const char nextLine[]);
     // send() scrolls the bottom 3 (of 4) lines up one line, and inserts the passed text into the bottom line of the LCD.
     // nextLine[] is a 20-byte max character string with a null terminator.
     // Sample call: sprintf(lcdString, "Bad Park 2 rec type!"); LCD.send(lcdString);
-    void send(const char nextLine[]);
 
   protected:
 
   private:
 
-    // DigoleSerialDisp is the name of the class in DigoleSerial.h/.cpp.
-    // So let's create a private pointer, called myLCD, to an object of that type (class):
     DigoleSerialDisp * myLCD;
+    // DigoleSerialDisp is the name of the class in DigoleSerial.h/.cpp.
+    // So create a private pointer, called myLCD, to an object of that type (class.)
 
 };
 

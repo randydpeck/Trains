@@ -279,7 +279,7 @@ void sendRS485ButtonPressUpdate(const byte tButtonPressed) {
   Message.SetTo (MsgOutgoing, ARDUINO_MAS);
   Message.SetFrom(MsgOutgoing, ARDUINO_BTN);
   Message.SetType(MsgOutgoing, 'B');
-  Message.SetButtonNo(MsgOutgoing, tButtonPressed);  // Button number 1..32 (not 0..31)
+  Message.SetButtonNum(MsgOutgoing, tButtonPressed);  // Button number 1..32 (not 0..31)
   Message.Send(MsgOutgoing);
 
   return;

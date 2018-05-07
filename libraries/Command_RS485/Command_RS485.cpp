@@ -1,7 +1,7 @@
-// Rev: 05/03/18
-// Command_RS485 handles RS485 (and maybe? digital-pin) communications, via a specified serial port.
+// Rev: 05/06/18
+// Command_RS485 handles RS485 (and *not* digital-pin) communications, via a specified serial port.
 
-#include "Command_RS485.h"
+#include <Command_RS485.h>
 
 Command_RS485::Command_RS485(HardwareSerial * hdwrSerial, long unsigned int baud, Display_2004 * LCD2004) {  // Constructor
   mySerial = hdwrSerial;  // Pointer to the serial port we want to use for RS485
@@ -10,12 +10,8 @@ Command_RS485::Command_RS485(HardwareSerial * hdwrSerial, long unsigned int baud
 }
 
 void Command_RS485::InitPort() {
-
-  sprintf(lcdString, "485 baud %6lu", myBaud);  // TESTING PURPOSES ONLY
-  myLCD->send(lcdString);
-  Serial.println(lcdString);
-
   // Initialize the serial port that this object will be using...
+
   mySerial->begin(myBaud);
 
 }
@@ -35,6 +31,7 @@ bool Command_RS485::RS485GetMessage(byte tMsg[]) {
   
   byte tMsgLen = mySerial->peek();     // First byte will be message length
   byte tBufLen = mySerial->available();  // How many bytes are waiting?  Size is 64.
+
   if (tBufLen >= tMsgLen) {  // We have at least enough bytes for a complete incoming message
     digitalWrite(PIN_RS485_RX_LED, HIGH);       // Turn on the receive LED
     if (tMsgLen < 5) {                 // Message too short to be a legit message.  Fatal!
@@ -71,8 +68,6 @@ bool Command_RS485::RS485GetMessage(byte tMsg[]) {
 }
 
 void Command_RS485::RS485SendMessage(byte tMsg[]) {
-  
-  // 10/1/16: Updated from 9/12/16 to write entire message as single mySerial->write(msg,len) command.
   // This routine must *only* be called when an entire message is ready to write, not a byte at a time.
   // This version, as part of the RS485 message class, automatically calculates and adds the CRC checksum.
   digitalWrite(PIN_RS485_TX_LED, HIGH);       // Turn on the transmit LED
@@ -80,8 +75,8 @@ void Command_RS485::RS485SendMessage(byte tMsg[]) {
   byte tMsgLen = GetLen(tMsg);
   tMsg[tMsgLen - 1] = calcChecksumCRC8(tMsg, tMsgLen - 1);  // Insert the checksum into the message
   mySerial->write(tMsg, tMsgLen);  // flush() makes it impossible to overflow the outgoing serial buffer, which CAN happen in my test code.
-                                 // Although it is BLOCKING code, we'll use it at least for now.  Output buffer overflow is unpredictable without it.
-                                 // Alternative would be to check available space in the outgoing serial buffer and stop on overflow, but how?
+                                   // Although it is BLOCKING code, we'll use it at least for now.  Output buffer overflow is unpredictable without it.
+                                   // Alternative would be to check available space in the outgoing serial buffer and stop on overflow, but how?
   mySerial->flush();               // wait for transmission of outgoing serial data to complete.  Takes about 0.1ms/byte.
   digitalWrite(PIN_RS485_TX_ENABLE, RS485_RECEIVE);  // receive mode
   digitalWrite(PIN_RS485_TX_LED, LOW);       // Turn off the transmit LED
@@ -89,8 +84,6 @@ void Command_RS485::RS485SendMessage(byte tMsg[]) {
 }
 
 byte Command_RS485::calcChecksumCRC8(const byte data[], byte len) {
-
-  // Rev 6/26/16
   // calcChecksumCRC8 returns the CRC-8 checksum to use or confirm.
   // Used for RS485 messages
   // Sample call: msg[msgLen - 1] = calcChecksumCRC8(msg, msgLen - 1);
