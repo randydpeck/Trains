@@ -25,31 +25,21 @@
 
 extern const byte THIS_MODULE;            // Will be set to A_MAS, A_SWT, etc. for each module
 
-const long unsigned int BAUD_MONITOR = 115200;  // Serial monitor baud rate 
-const long unsigned int BAUD_LCD     = 115200;  // 2004 LCD serial port baud rate
-const long unsigned int BAUD_RS485   = 115200;  // RS485 message bus serial port baud rate
-
 const byte LCD_WIDTH = 20;                // 2004 (20 char by 4 lines) LCD display
 
-const byte TOTAL_SENSORS          =  52;
-const byte TOTAL_BLOCKS           =  26;
-const byte MAX_TRAINS             =   8;
-const byte TRAIN_ID_NULL          =   0;  // Used for "no train."
-const byte TRAIN_ID_STATIC        =  99;  // This train number is a static train.
-const byte MAX_BLOCKS_PER_TRAIN   =  12;  // Maximum number of occupied blocks FOR ANY ONE TRAIN in the Train Progress table, to dimension array.
-const byte TOTAL_TURNOUTS         =  32;  // 30 connected, but 32 relays.
+const byte TOTAL_TURNOUTS    =  32;       // 30 connected, but 32 relays.
 
 // Note that the serial input buffer is only 64 bytes, which means that we need to keep emptying it since there
 // will be many commands between Arduinos, even though most may not be for THIS Arduino.  If the buffer overflows,
 // then we will be totally screwed up (but it will be apparent in the checksum.)
+const byte RS485_MAX_LEN     = 20;        // buffer length to hold the longest possible RS485 message.  Just a guess.
+const byte RS485_LEN_OFFSET  =  0;        // first byte of message is always total message length in bytes
+const byte RS485_TO_OFFSET   =  1;        // second byte of message is the ID of the Arduino the message is addressed to
+const byte RS485_FROM_OFFSET =  2;        // third byte of message is the ID of the Arduino the message is coming from
+const byte RS485_TYPE_OFFSET =  3;        // fourth byte of message is the type of message such as M for Mode, S for Smoke, etc.
 // Note also that the LAST byte of the message is a CRC8 checksum of all bytes except the last
-const byte RS485_MAX_LEN         = 20;    // buffer length to hold the longest possible RS485 message.  Just a guess.
-const byte RS485_LEN_OFFSET      =  0;    // first byte of message is always total message length in bytes
-const byte RS485_TO_OFFSET       =  1;    // second byte of message is the ID of the Arduino the message is addressed to
-const byte RS485_FROM_OFFSET     =  2;    // third byte of message is the ID of the Arduino the message is coming from
-const byte RS485_TYPE_OFFSET     =  3;    // fourth byte of message is the type of message such as M for Mode, S for Smoke, etc.
-const byte RS485_TRANSMIT        = HIGH;  // HIGH = 0x1.  How to set TX_CONTROL pin when we want to transmit RS485
-const byte RS485_RECEIVE         = LOW;   // LOW = 0x0.  How to set TX_CONTROL pin when we want to receive (or NOT transmit) RS485
+const byte RS485_TRANSMIT    = HIGH;      // HIGH = 0x1.  How to set TX_CONTROL pin when we want to transmit RS485
+const byte RS485_RECEIVE     = LOW;       // LOW = 0x0.  How to set TX_CONTROL pin when we want to receive (or NOT transmit) RS485
 
 const byte RS485_BTN_BUTTON_NO_OFFSET = 4;      // Offset into "real" RS485 message where button no. that was pressed is stored (A_MAS and A_BTN)
 

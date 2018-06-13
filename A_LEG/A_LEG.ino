@@ -99,12 +99,7 @@ char APPVERSION[21] = "A-LEG Rev. 12/03/17";
 // *** RS485 MESSAGE PROTOCOLS used by A-LEG.  Byte numbers represent offsets, so they start at zero. ***
 // Because there are so many message types, we will document the protocols here and just use integers for offsets in the code.
 
-// **********************************
-// *****  ALL MODES AND STATES  *****
-// **********************************
-
 // A-MAS BROADCAST: Mode change
-// ALL MODES AND STATES need to watch for this.
 // Rev: 08/31/17
 // OFFSET DESC      SIZE  CONTENTS
 //   	0	  Length	  Byte	7
@@ -115,12 +110,18 @@ char APPVERSION[21] = "A-LEG Rev. 12/03/17";
 //   	5	  State	    Byte  1..3 [Running | Stopping | Stopped]
 //   	6	  Cksum	    Byte  0..255
 
-// ***********************************
-// *****  REGISTRATION mode only *****
-// ***********************************
+// A-SNS to A-MAS:  Sensor status update for a single sensor change (A-LEG snoops directly, and updates Train Progress etc.)
+// Rev: 08/31/17
+// OFFSET  DESC      SIZE  CONTENTS
+//    0	   Length	   Byte	 7
+//    1	   To	       Byte	 1 (A_MAS)
+//    2	   From	     Byte	 3 (A_SNS)
+//    3    Command   Char  'S' Sensor status update
+//    4    Sensor #  Byte  1..52 (Note that as of Sept 2017, we have disconnected sensor 53 from the layout)
+//    5    Trip/Clr  Byte  [0|1] 0-Cleared, 1=Tripped
+//    6	   Checksum	 Byte  0..255
 
-// A-MAS to A-LEG: Tell A-LEG if operator wants SMOKE, based on a/n query by A-OCC.
-// REGISTRATION MODE MESSAGE ONLY.
+// A-MAS to A-LEG: Tell A-LEG if operator wants SMOKE, based on a/n query by A-OCC.  Registration mode only.
 // Rev: 09/27/17
 // OFFSET DESC      SIZE  CONTENTS
 //    0   Length    Byte  6
@@ -130,8 +131,7 @@ char APPVERSION[21] = "A-LEG Rev. 12/03/17";
 //    4   Reply     Char  [Y|N]
 //    5   Cksum     Byte  0..255
 
-// A-MAS to A-LEG: Tell A-LEG if operator wants FAST or SLOW loco startup, based on a/n query by A-OCC.
-// REGISTRATION MODE MESSAGE ONLY.
+// A-MAS to A-LEG: Tell A-LEG if operator wants FAST or SLOW loco startup, based on a/n query by A-OCC.  Registration mode only.
 // Rev: 09/27/17
 // OFFSET DESC      SIZE  CONTENTS
 //    0   Length    Byte  6
@@ -141,8 +141,7 @@ char APPVERSION[21] = "A-LEG Rev. 12/03/17";
 //    4   Reply     Char  [F|S]
 //    5   Cksum     Byte  0..255
 
-// A-OCC to A-MAS: Reply REGISTERED TRAINS from operator via alphanumeric display.
-// REGISTRATION MODE MESSAGE ONLY.
+// A-OCC to A-MAS: Reply REGISTERED TRAINS from operator via alphanumeric display.  Registration mode only.
 // Rev: 09/27/17
 // OFFSET DESC      SIZE  CONTENTS
 //    0   Length    Byte  9
@@ -155,29 +154,7 @@ char APPVERSION[21] = "A-LEG Rev. 12/03/17";
 //    7   Last?     Char  'N' means there will be another identified train message coming; 'Y' means we are done and no train data in this record.
 //    8	  Cksum	    Byte  0..255
 
-// *************************************
-// *****  AUTO and PARK mode only  *****
-// *************************************
-
-// A-SNS to A-MAS:  Sensor status update for a single sensor change (A-LEG snoops directly, and updates Train Progress etc.)
-// AUTO and PARK MODE only.
-//   In Manual mode, A_LEG doesn't care about train movements.
-//   In Register mode, a sensor change would be a fatal error that another module would catch.
-//   In Auto mode, A_LEG needs to follow the progress of trains, so this is important.
-//   In Park mode, A_LEG needs to follow the progress of trains just like in Auto mode.
-//   In POV mode, it's just like manual mode -- A_LEG doesn't care about movements.
-// Rev: 08/31/17
-// OFFSET  DESC      SIZE  CONTENTS
-//    0	   Length	   Byte	 7
-//    1	   To	       Byte	 1 (A_MAS)
-//    2	   From	     Byte	 3 (A_SNS)
-//    3    Command   Char  'S' Sensor status update
-//    4    Sensor #  Byte  1..52 (Note that as of Sept 2017, we have disconnected sensor 53 from the layout)
-//    5    Trip/Clr  Byte  [0|1] 0-Cleared, 1=Tripped
-//    6	   Checksum	 Byte  0..255
-
-// A-MAS to A-LEG:  Command to set a new Route (regular, or Park 1 or Park 2) for a registered train.
-// AUTO and PARK MODE only.
+// A-MAS to A-LEG:  Command to set a new Route (regular, or Park 1 or Park 2) or a registered train.  AUTO and PARK MODE only.
 // Rev: 08/31/17
 // OFFSET  DESC      SIZE  CONTENTS
 //    0	   Length	   Byte	 7
@@ -189,35 +166,6 @@ char APPVERSION[21] = "A-LEG Rev. 12/03/17";
 //    6	   Checksum	 Byte  0..255
 
 // **************************************************************************************************************************
-
-/*
-
-If (Network.MessageReceive()) {   
-
-// Returns true *and* retrieves a message to the object's buffer iff there is a new message.
-// QUESTION: How do we ensure that we get the fields before calling MessageReceive() the next time?
-//   Just by the organization of the code blocks, I suppose.
-// This would be TRUE if there was a NEW RS485 message *and* it was relevant to us.
-// Maybe we want to provide the current Mode and State to Network_LEG so it can decide if the new
-// message is relevant not just to A_LEG, but also in this mode.  Only returns true if it is.
-// If Message_Received() == true, then the object has the incoming message guts, and we can call
-// specific object functions, such as Network.GetType (just a few possibilities in a given mode),
-// followed by i.e. if type == sensor change, then call Network.GetSensorNum and Network.GetTripClear.
-// Or if type == new route, then call Network.GetRouteType (T|1|2), .GetRouteNum, and GetTrainNum.
-
-// Maybe I should create TWO network message objects, a Send and a Receive, and maintain a separate
-// RS485_MAX_LEN byte buffer for each of them.  So the only PUBLIC methods for send would be "setters,"
-// and the only PUBLIC methods for receive would be "getters."
-// That way, I'm certain to not step on incoming data when I'm setting outgoing, and vice-versa.
-// STILL ONLY NEED ONE OBJECT, "Network", but it can have two buffers, and all of my "setters" and
-// "getters" only work on their own buffers.
-// Then I would NOT need to have RS485Incoming and RS485Outgoing byte buffers in any A_XXX.ino code.
-// Current max lenght is 16 bytes (registration train names to/from A_OCC/A_MAS.)
-
-*/
-
-
-
 
 #include <Train_Consts_Global.h>
 const byte THIS_MODULE = ARDUINO_BTN;  // Not sure if/where I will use this - intended if I call a common function but will this "global" be seen there?
@@ -323,7 +271,7 @@ const byte MAX_TRAINS              =   8;
 const byte TRAIN_ID_NULL           =   0;  // Used for "no train."
 const byte TRAIN_ID_STATIC         =  99;  // This train number is a static train.
 const byte MAX_BLOCKS_PER_TRAIN    =  12;  // Maximum number of occupied blocks FOR ANY ONE TRAIN in the Train Progress table, to dimension array.
-const byte TOTAL_TURNOUTS          =  32;  // 30 connected, but 32 relays.
+//const byte TOTAL_TURNOUTS          =  32;  // 30 connected, but 32 relays.
 
 // Global constants and variables used in Legacy/TMCC serial command buffer.
 // First define global bytes for each of the 9 possible used in Legacy commands.

@@ -1,6 +1,5 @@
-// Rev: 05/09/18
+// Rev: 04/25/18
 // Display_2004 handles display of messages from the modules to the 20-char, 4-line (2004) Digole LCD display.
-
 
 #include "Display_2004.h"
 
@@ -8,7 +7,7 @@
 Display_2004::Display_2004(DigoleSerialDisp * DigoleLCD) {  // Constructor for method 3
 
   // DigoleSerialDisp is the name of the class in DigoleSerial.h/.cpp.  Note: Neither a parent nor a child class.
-  // m_LCD is a private pointer of type DigoleSerialDisp that will point to the Digole object.
+  // myLCD is a private pointer of type DigoleSerialDisp that will point to the Digole object.
 
   // There are three ways to instantiate the DigoleSerialDisp object needed by the Display_2004 constructor.
   
@@ -19,7 +18,7 @@ Display_2004::Display_2004(DigoleSerialDisp * DigoleLCD) {  // Constructor for m
   // Constructor definition:
   //   Display_2004::Display_2004(HardwareSerial * hdwrSerial, long unsigned int baud) {
   // Constructor content:
-  //   m_LCD = new DigoleSerialDisp(hdwrSerial, baud);
+  //   myLCD = new DigoleSerialDisp(hdwrSerial, baud);
   // hdwrSerial needs to be the address of Serial thru Serial3.
   // baud can be any legit baud rate such as 115200.
 
@@ -30,7 +29,7 @@ Display_2004::Display_2004(DigoleSerialDisp * DigoleLCD) {  // Constructor for m
   //   Display_2004::Display_2004(HardwareSerial * hdwrSerial, long unsigned int baud) {
   // Constructor content:
   //   static DigoleSerialDisp DigoleLCD(hdwrSerial, baud);
-  //   m_LCD = &DigoleLCD;
+  //   myLCD = &DigoleLCD;
 
   // Method 3 requires you to instantiate the DigoleSerialDisp object in the calling .ino code, instead of this constructor.
   // It overcomes the disadvantages of both above methods: It does not use "new", and it allow instantiation of multiple objects.
@@ -46,22 +45,21 @@ Display_2004::Display_2004(DigoleSerialDisp * DigoleLCD) {  // Constructor for m
   //   Display_2004::Display_2004(DigoleSerialDisp * DigoleLCD) {  // Constructor for method 3
   // And the constructor would need this line:
 
-  m_LCD = DigoleLCD;  // Assigns the Digole LCD pointer we were passed to our local private pointer
+  myLCD = DigoleLCD;  // Assigns the Digole LCD pointer we were passed to our local private pointer
+
   return;
 
 }
 
-
 void Display_2004::init() {
 
-  m_LCD->begin();                     // Required to initialize LCD
-  m_LCD->setLCDColRow(LCD_WIDTH, 4);  // Maps starting RAM address on LCD (if other than 1602)
-  m_LCD->disableCursor();             // We don't need to see a cursor on the LCD
-  m_LCD->backLightOn();
+  myLCD->begin();                     // Required to initialize LCD
+  myLCD->setLCDColRow(LCD_WIDTH, 4);  // Maps starting RAM address on LCD (if other than 1602)
+  myLCD->disableCursor();             // We don't need to see a cursor on the LCD
+  myLCD->backLightOn();
   delay(20);                           // About 15ms required to allow LCD to boot before clearing screen
-  m_LCD->clearScreen();               // FYI, won't execute as the *first* LCD command
+  myLCD->clearScreen();               // FYI, won't execute as the *first* LCD command
   delay(100);                          // At 115200 baud, needs > 90ms after CLS before sending text.  No delay needed at 9600 baud.
-
   return;
 
 }
@@ -97,17 +95,17 @@ void Display_2004::send(const char nextLine[]) {
   // Pad the new bottom line with trailing spaces as needed.
   while (newLineLen < LCD_WIDTH) lineD[newLineLen++] = ' ';  // Last byte not touched; always remains "null."
   // Update the display.  Updated 10/28/16 by TimMe to add delays to fix rare random chars on display.
-  m_LCD->setPrintPos(0, 0);
-  m_LCD->print(lineA);
+  myLCD->setPrintPos(0, 0);
+  myLCD->print(lineA);
   delay(1);
-  m_LCD->setPrintPos(0, 1);
-  m_LCD->print(lineB);
+  myLCD->setPrintPos(0, 1);
+  myLCD->print(lineB);
   delay(2);
-  m_LCD->setPrintPos(0, 2);
-  m_LCD->print(lineC);
+  myLCD->setPrintPos(0, 2);
+  myLCD->print(lineC);
   delay(3);
-  m_LCD->setPrintPos(0, 3);
-  m_LCD->print(lineD);
+  myLCD->setPrintPos(0, 3);
+  myLCD->print(lineD);
   delay(1);
   return;
 

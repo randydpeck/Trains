@@ -1,7 +1,7 @@
 // Rev: 05/05/18
 // Train_Consts_Global declares and defines all constants that are global to all (or nearly all) Arduino modules.
 
-#include "Train_Consts_Global.h"
+#include <Train_Consts_Global.h>
 
 /*
 // I think I prefer to define the following three arrays in the A_xxx.ino program code.  
