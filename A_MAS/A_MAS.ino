@@ -1,4 +1,3 @@
-#include <Command_RS485.h>
 char APPVERSION[21] = "A-MAS Rev. 04/20/18";
 #include <Train_Consts_Global.h>
 const byte THIS_MODULE = ARDUINO_MAS;  // Not sure if/where I will use this - intended if I call a common function but will this "global" be seen there?
@@ -294,18 +293,6 @@ Hackscribble_Ferro FRAM1(MB85RS64, PIN_FRAM1);   // Create the FRAM1 object!
 // byte               FRAM2GotVersion[3]       = {  0,  0,  0 };  // This will hold the version retrieved from FRAM2, to confirm matches version above.
 // Hackscribble_Ferro FRAM2(MB85RS64, PIN_FRAM2);  // Create the FRAM2 object!
 // Repeat above for FRAM3 if we need a third FRAM
-
-// *** MISC CONSTANTS AND GLOBALS: needed by A-MAS:
-// true = any non-zero number
-// false = 0
-
-const byte TOTAL_SENSORS           =  52;
-const byte TOTAL_BLOCKS            =  26;
-const byte MAX_TRAINS              =   8;
-const byte TRAIN_ID_NULL           =   0;  // Used for "no train."
-const byte TRAIN_ID_STATIC         =  99;  // This train number is a static train.
-const byte MAX_BLOCKS_PER_TRAIN    =  12;  // Maximum number of occupied blocks FOR ANY ONE TRAIN in the Train Progress table, to dimension array.
-const byte TOTAL_TURNOUTS          =  32;  // 30 connected, but 32 relays.
 
 // firstTimeThrough is only true the first time into a Manual, Register, Auto, or Park section of do-the-mode code.
 // We use it to determine if we should read from the FRAM1 control block to get the last-known-state of all trains,

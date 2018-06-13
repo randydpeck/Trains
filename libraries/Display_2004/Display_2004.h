@@ -1,4 +1,4 @@
-// Rev: 04/22/18
+// Rev: 05/09/18
 // Display_2004 handles display of messages from the modules to the 20-char, 4-line (2004) Digole LCD display.
 
 // It simplifies use of the LCD display by encapsulating all of the initialization and scrolling logic within the class.
@@ -7,12 +7,12 @@
 #ifndef DISPLAY_2004_H
 #define DISPLAY_2004_H
 
-#include <Train_Consts_Global.h>
+#include "Train_Consts_Global.h"
 
 // The following lines are required by the Digole serial LCD display, connected to an Arduino hardware serial port.
 // The Digole LCD is an object that is used by our primary 20x04 LCD object "Display_2004."
 #define _Digole_Serial_UART_    // To tell compiler compile the Digole library serial communication only
-#include <DigoleSerial.h>       
+#include <DigoleSerial.h>
 
 class Display_2004
 {
@@ -33,9 +33,9 @@ class Display_2004
 
   private:
 
-    DigoleSerialDisp * myLCD;
+    DigoleSerialDisp * m_LCD;
     // DigoleSerialDisp is the name of the class in DigoleSerial.h/.cpp.
-    // So create a private pointer, called myLCD, to an object of that type (class.)
+    // So create a private pointer, called m_LCD, to an object of that type (class.)
 
 };
 

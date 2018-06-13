@@ -1,37 +1,37 @@
-#include <Train_Consts_Global.h>
-char APPVERSION[LCD_WIDTH + 1] = "A-TS1 Rev. 05/03/18";
+#include "Train_Consts_Global.h"
+char APPVERSION[LCD_WIDTH + 1] = "A-TS1 Rev. 05/09/18";
 const byte THIS_MODULE = ARDUINO_BTN;  // Not sure if/where I will use this - intended if I call a common function but will this "global" be seen there?
 
 
 // *** SERIAL LCD DISPLAY CLASS:
-#define _Digole_Serial_UART_                  // To tell compiler compile the serial communication only
-#include <DigoleSerial.h>                     // Tell the compiler to use the DigoleSerial class library
+#define _Digole_Serial_UART_                      // To tell compiler compile the serial communication only
+#include "DigoleSerial.h"                         // Tell the compiler to use the DigoleSerial class library
 // DigoleSerialDisp needs serial port address i.e. &Serial, &Serial1, &Serial2, or &Serial3.
 // DigoleSerialDisp also needs a valid baud rate, typically 9600 or 115200.
-DigoleSerialDisp digoleLCD(&Serial1, 115200); // Instantiate and name the Digole object
-#include <Display_2004.h>                     // Our LCD message-display library
-Display_2004 LCD(&digoleLCD);                 // Instantiate our LCD object "LCD" by passing a pointer to the Digole LCD object.
-char lcdString[LCD_WIDTH + 1];                // Global array to hold strings sent to Digole 2004 LCD; last char is for null terminator.
+DigoleSerialDisp digoleLCD(&Serial1, BAUD_LCD);   // Instantiate and name the Digole object
+#include "Display_2004.h"                         // Our LCD message-display library
+Display_2004 LCD(&digoleLCD);                     // Instantiate our LCD object "LCD" by passing a pointer to the Digole LCD object.
+char lcdString[LCD_WIDTH + 1];                    // Global array to hold strings sent to Digole 2004 LCD; last char is for null terminator.
 
 // *** RS485 & Digital Pin MESSAGE CLASS (Inter-Arduino communications):
-#include <Command_TST.h>                      // This module's communitcation class, in its .ini directory
-Command_TST Command(&Serial2, 115200, &LCD);  // Instantiate our RS485/digital communications object "Command."
-byte MsgIncoming[RS485_MAX_LEN];              // Global array for incoming inter-Arduino messages.  No need to init contents.
-byte MsgOutgoing[RS485_MAX_LEN];              // No need to initialize contents.
+#include "Network_TST.h"                          // This module's communitcation class, in its .ini directory
+Network_TST Network(&Serial2, BAUD_RS485, &LCD);  // Instantiate our RS485/digital communications object "Network."
+byte MsgIncoming[RS485_MAX_LEN];                  // Global array for incoming inter-Arduino messages.  No need to init contents.
+byte MsgOutgoing[RS485_MAX_LEN];                  // No need to initialize contents.
 
 void setup() {
 
   delay(1000);
 
-  Serial.begin(115200);                 // PC serial monitor window (MOVE THIS CONST TO A GLOBAL ie. 9600 or 115200)
+  Serial.begin(BAUD_MONITOR);           // PC serial monitor window (MOVE THIS CONST TO A GLOBAL ie. 9600 or 115200)
   Serial.println("Starting setup().");
   LCD.init();                           // Initialize the 20 x 04 Digole serial LCD display object "LCD."
   sprintf(lcdString, APPVERSION);       // Display the application version number on the LCD display
   LCD.send(lcdString);
-  Command.Init();                       // Initialize the RS485/Digital communications object "Command."
+  Network.Init();                       // Initialize the RS485/Digital communications object "Network."
   
   // Comment out MASTER to compile as SLAVE
-  #define MASTER
+  //#define MASTER
 
   #ifdef MASTER  // Master will watch for RTX pin pulled low by slave, then send ack RS485 msg, then wait for RS485 button number msg.
 
@@ -44,7 +44,7 @@ void setup() {
   byte buttonPressed = 0;
   while (true) {
 
-    buttonPressed = Command.GetTurnoutButtonPress();
+    buttonPressed = Network.GetTurnoutButtonPress();
     if (buttonPressed > 0) {  // We got a button press!
       sprintf(lcdString, "Button %2i pressed.", buttonPressed);
       LCD.send(lcdString);
@@ -63,7 +63,7 @@ void setup() {
   sprintf(lcdString, "%.20s", "BTN sending RTX...");
   LCD.send(lcdString);
   byte buttonPressed = 17;
-  Command.SendTurnoutButtonPress(buttonPressed);  // Don't even need to send it the message buffer!
+  Network.SendTurnoutButtonPress(buttonPressed);  // Don't even need to send it the message buffer!
   sprintf(lcdString, "Sent.");
   LCD.send(lcdString);
   
