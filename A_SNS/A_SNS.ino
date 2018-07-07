@@ -55,23 +55,23 @@ char APPVERSION[21] = "A-SNS Rev. 10/01/17";
 
 // A-MAS to A-SNS:  Permission for A_SNS to send a sensor change record.
 // Rev: 08/31/17
-// OFFSET  DESC      SIZE  CONTENTS
-//    0	   Length	   Byte	 5
-//    1	   To	       Byte	 3 (A_SNS)
-//    2	   From	     Byte	 1 (A_MAS)
-//    3    Command   Char  'S' Sensor status request (sent after it sees that a sensor changed, via a digital input from A-SNS.)
-//    4	   Checksum	 Byte  0..255
+// OFFSET  DESC       SIZE  CONTENTS
+//      0  Length     Byte  5
+//      1  To         Byte  3 (A_SNS)
+//      2  From       Byte  1 (A_MAS)
+//      3  Command    Char  'S' Sensor status request (sent after it sees that a sensor changed, via a digital input from A-SNS.)
+//      4  Checksum   Byte  0..255
 
 // A-SNS to A-MAS:  Sensor status update for a single sensor change
 // Rev: 08/31/17
-// OFFSET  DESC      SIZE  CONTENTS
-//    0	   Length	   Byte	 7
-//    1	   To	       Byte	 1 (A_MAS)
-//    2	   From	     Byte	 3 (A_SNS)
-//    3    Command   Char  'S' Sensor status update
-//    4    Sensor #  Byte  1..52 (Note that as of Sept 2017, our code ignores sensor 53 and we have disconnected it from the layout)
-//    5    Trip/Clr  Byte  [0|1] 0-Cleared, 1=Tripped
-//    6	   Checksum	 Byte  0..255
+// OFFSET  DESC       SIZE  CONTENTS
+//      0  Length     Byte  7
+//      1  To         Byte  1 (A_MAS)
+//      2  From       Byte  3 (A_SNS)
+//      3  Command    Char  'S' Sensor status update
+//      4  Sensor #   Byte  1..52 (Note that as of Sept 2017, our code ignores sensor 53 and we have disconnected it from the layout)
+//      5  Trip/Clr   Byte  [0|1] 0-Cleared, 1=Tripped
+//      6  Checksum   Byte  0..255
 
 // **************************************************************************************************************************
 

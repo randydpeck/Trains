@@ -14,8 +14,8 @@ Display_2004 LCD(&digoleLCD);                 // Instantiate our LCD object "LCD
 char lcdString[LCD_WIDTH + 1];                // Global array to hold strings sent to Digole 2004 LCD; last char is for null terminator.
 
 // *** RS485 & Digital Pin MESSAGE CLASS (Inter-Arduino communications):
-#include <Command_TST.h>                      // This module's communitcation class, in its .ini directory
-Command_TST Command(&Serial2, 115200, &LCD);  // Instantiate our RS485/digital communications object "Command."
+#include <Message_TST.h>                      // This module's communitcation class, in its .ini directory
+Message_TST Message(&Serial2, 115200, &LCD);  // Instantiate our RS485/digital communications object "Message."
 byte MsgIncoming[RS485_MAX_LEN];              // Global array for incoming inter-Arduino messages.  No need to init contents.
 byte MsgOutgoing[RS485_MAX_LEN];              // No need to initialize contents.
 
@@ -28,7 +28,7 @@ void setup() {
   LCD.init();                           // Initialize the 20 x 04 Digole serial LCD display object "LCD."
   sprintf(lcdString, APPVERSION);       // Display the application version number on the LCD display
   LCD.send(lcdString);
-  Command.Init();                       // Initialize the RS485/Digital communications object "Command."
+  Message.Init();                       // Initialize the RS485/Digital communications object "Message."
   
   // Comment out MASTER to compile as SLAVE
   #define MASTER
@@ -44,7 +44,7 @@ void setup() {
   byte buttonPressed = 0;
   while (true) {
 
-    buttonPressed = Command.GetTurnoutButtonPress();
+    buttonPressed = Message.GetTurnoutButtonPress();
     if (buttonPressed > 0) {  // We got a button press!
       sprintf(lcdString, "Button %2i pressed.", buttonPressed);
       LCD.send(lcdString);
@@ -63,7 +63,7 @@ void setup() {
   sprintf(lcdString, "%.20s", "BTN sending RTX...");
   LCD.send(lcdString);
   byte buttonPressed = 17;
-  Command.SendTurnoutButtonPress(buttonPressed);  // Don't even need to send it the message buffer!
+  Message.SendTurnoutButtonPress(buttonPressed);  // Don't even need to send it the message buffer!
   sprintf(lcdString, "Sent.");
   LCD.send(lcdString);
   

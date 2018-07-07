@@ -101,69 +101,69 @@ char APPVERSION[21] = "A-LEG Rev. 12/03/17";
 
 // A-MAS BROADCAST: Mode change
 // Rev: 08/31/17
-// OFFSET DESC      SIZE  CONTENTS
-//   	0	  Length	  Byte	7
-//   	1	  To	      Byte	99 (ALL)
-//   	2	  From	    Byte	1 (A_MAS)
-//    3   Msg Type  Char  'M' means this is a Mode/State update command
-//   	4	  Mode	    Byte  1..5 [Manual | Register | Auto | Park | POV]
-//   	5	  State	    Byte  1..3 [Running | Stopping | Stopped]
-//   	6	  Cksum	    Byte  0..255
+// OFFSET  DESC       SIZE  CONTENTS
+//      0  Length     Byte  7
+//      1  To         Byte  99 (ALL)
+//      2  From       Byte  1 (A_MAS)
+//      3  Msg Type   Char  'M' means this is a Mode/State update command
+//      4  Mode       Byte  1..5 [Manual | Register | Auto | Park | POV]
+//      5  State      Byte  1..3 [Running | Stopping | Stopped]
+//      6  Cksum      Byte  0..255
 
 // A-SNS to A-MAS:  Sensor status update for a single sensor change (A-LEG snoops directly, and updates Train Progress etc.)
 // Rev: 08/31/17
-// OFFSET  DESC      SIZE  CONTENTS
-//    0	   Length	   Byte	 7
-//    1	   To	       Byte	 1 (A_MAS)
-//    2	   From	     Byte	 3 (A_SNS)
-//    3    Command   Char  'S' Sensor status update
-//    4    Sensor #  Byte  1..52 (Note that as of Sept 2017, we have disconnected sensor 53 from the layout)
-//    5    Trip/Clr  Byte  [0|1] 0-Cleared, 1=Tripped
-//    6	   Checksum	 Byte  0..255
+// OFFSET  DESC       SIZE  CONTENTS
+//      0  Length     Byte  7
+//      1  To         Byte  1 (A_MAS)
+//      2  From       Byte  3 (A_SNS)
+//      3  Command    Char  'S' Sensor status update
+//      4  Sensor #   Byte  1..52 (Note that as of Sept 2017, we have disconnected sensor 53 from the layout)
+//      5  Trip/Clr   Byte  [0|1] 0-Cleared, 1=Tripped
+//      6  Checksum   Byte  0..255
 
 // A-MAS to A-LEG: Tell A-LEG if operator wants SMOKE, based on a/n query by A-OCC.  Registration mode only.
 // Rev: 09/27/17
-// OFFSET DESC      SIZE  CONTENTS
-//    0   Length    Byte  6
-//   	1	  To	      Byte	2 (A-LEG)
-//   	2	  From	    Byte	1 (A_MAS)
-//    3   Msg Type  Char  'S' = Smoke for locos, yes or no
-//    4   Reply     Char  [Y|N]
-//    5   Cksum     Byte  0..255
+// OFFSET  DESC       SIZE  CONTENTS
+//      0  Length     Byte  6
+//      1  To         Byte  2 (A-LEG)
+//      2  From       Byte  1 (A_MAS)
+//      3  Msg Type   Char  'S' = Smoke for locos, yes or no
+//      4  Reply      Char  [Y|N]
+//      5  Cksum      Byte  0..255
 
 // A-MAS to A-LEG: Tell A-LEG if operator wants FAST or SLOW loco startup, based on a/n query by A-OCC.  Registration mode only.
 // Rev: 09/27/17
-// OFFSET DESC      SIZE  CONTENTS
-//    0   Length    Byte  6
-//   	1	  To	      Byte	2 (A-LEG)
-//   	2	  From	    Byte	1 (A_MAS)
-//    3   Msg Type  Char  'F' = Does operator want fast or slow loco startup at registration?
-//    4   Reply     Char  [F|S]
-//    5   Cksum     Byte  0..255
+// OFFSET  DESC       SIZE  CONTENTS
+//      0  Length     Byte  6
+//      1  To         Byte  2 (A-LEG)
+//      2  From       Byte  1 (A_MAS)
+//      3  Msg Type   Char  'F' = Does operator want fast or slow loco startup at registration?
+//      4  Reply      Char  [F|S]
+//      5  Cksum      Byte  0..255
 
 // A-OCC to A-MAS: Reply REGISTERED TRAINS from operator via alphanumeric display.  Registration mode only.
 // Rev: 09/27/17
-// OFFSET DESC      SIZE  CONTENTS
-//    0   Length    Byte  9
-//   	1	  To	      Byte	1 (A-MAS)
-//   	2	  From	    Byte	7 (A_OCC)
-//    3   Msg Type  Char  1 'R' means train Registration reply. This will always be a "real" train, never zero, never TRAIN_STATIC or TRAIN_DONE.
-//    4   Train No. Byte  [1..MAX_TRAINS]  Can only be zero if this is the last record, which contains no train data.
-//    5   Block No. Byte  [1..TOTAL_BLOCKS]  Can only be zero if this is the last record, which contains no train data.
-//    6   Block Dir Char  [E|W] Indicates which direction the train is facing withing that block.  Known based on which block sensor is tripped.
-//    7   Last?     Char  'N' means there will be another identified train message coming; 'Y' means we are done and no train data in this record.
-//    8	  Cksum	    Byte  0..255
+// OFFSET  DESC       SIZE  CONTENTS
+//      0  Length     Byte  9
+//      1  To         Byte  1 (A-MAS)
+//      2  From       Byte  7 (A_OCC)
+//      3  Msg Type   Char  1 'R' means train Registration reply. This will always be a "real" train, never zero, never TRAIN_STATIC or TRAIN_DONE.
+//      4  Train No.  Byte  [1..MAX_TRAINS]  Can only be zero if this is the last record, which contains no train data.
+//      5  Block No.  Byte  [1..TOTAL_BLOCKS]  Can only be zero if this is the last record, which contains no train data.
+//      6  Block Dir  Char  [E|W] Indicates which direction the train is facing withing that block.  Known based on which block sensor is tripped.
+//      7  Last?      Char  'N' means there will be another identified train message coming; 'Y' means we are done and no train data in this record.
+//      8  Cksum      Byte  0..255
 
 // A-MAS to A-LEG:  Command to set a new Route (regular, or Park 1 or Park 2) or a registered train.  AUTO and PARK MODE only.
 // Rev: 08/31/17
-// OFFSET  DESC      SIZE  CONTENTS
-//    0	   Length	   Byte	 7
-//    1	   To	       Byte	 2 (A_LEG)
-//    2	   From	     Byte	 1 (A_MAS)
-//    3    Command   Char  [T|1|2] rouTe|park 1|park 2 ('T' for consistency with A-SWT protocols.)
-//    4    Route Num Byte  Route number from one of the three route tables, 1..70, 1..19, or 1..4
-//    5    Train Num Byte  1..9
-//    6	   Checksum	 Byte  0..255
+// OFFSET  DESC       SIZE  CONTENTS
+//      0  Length     Byte  7
+//      1  To         Byte  2 (A_LEG)
+//      2  From       Byte  1 (A_MAS)
+//      3  Command    Char  [T|1|2] rouTe|park 1|park 2 ('T' for consistency with A-SWT protocols.)
+//      4  Route Num  Byte  Route number from one of the three route tables, 1..70, 1..19, or 1..4
+//      5  Train Num  Byte  1..9
+//      6  Checksum   Byte  0..255
 
 // **************************************************************************************************************************
 
@@ -1247,10 +1247,10 @@ void loop() {
     // actionElement.deviceType (1 char) Engine or Train or blank if  n/a
     // actionElement.deviceNum (1 byte) Engine, Train, Acc'y, sWitch, or Route number
     // actionElement.commandType (1 char) [E|A|M|S|B|D|F|C|T|Y|W}R]
-    //	 E = Emergency Stop All Devices(FE FF FF) (Note : all other parms in command are moot so ignore them)
-    //	 A = Absolute Speed command
-    //	 M = Momentum 0..7
-    //	 S = Stop Immediate(this engine / train only)
+    //   E = Emergency Stop All Devices(FE FF FF) (Note : all other parms in command are moot so ignore them)
+    //   A = Absolute Speed command
+    //   M = Momentum 0..7
+    //   S = Stop Immediate(this engine / train only)
     //   B = Basic 3 - byte Legacy command(always AAAA AAA1 XXXX XXXX)
     //   D = Railsounds Dialogue(9 - byte Legacy extended command)
     //   F = Railsounds Effect(9 - byte Legacy extended command)

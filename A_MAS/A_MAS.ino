@@ -55,171 +55,171 @@ const byte THIS_MODULE = ARDUINO_MAS;  // Not sure if/where I will use this - in
 
 // A-MAS BROADCAST: Mode change
 // Rev: 08/31/17
-// OFFSET DESC      SIZE  CONTENTS
-//   	0	  Length	  Byte	7
-//   	1	  To	      Byte	99 (ALL)
-//   	2	  From	    Byte	1 (A_MAS)
-//    3   Msg Type  Char  'M' means this is a Mode/State update command
-//   	4	  Mode	    Byte  1..5 [Manual | Register | Auto | Park | POV]
-//   	5	  State	    Byte  1..3 [Running | Stopping | Stopped]
-//   	6	  Cksum	    Byte  0..255
+// OFFSET  DESC       SIZE  CONTENTS
+//      0  Length     Byte  7
+//      1  To         Byte  99 (ALL)
+//      2  From       Byte  1 (A_MAS)
+//      3  Msg Type   Char  'M' means this is a Mode/State update command
+//      4  Mode       Byte  1..5 [Manual | Register | Auto | Park | POV]
+//      5  State      Byte  1..3 [Running | Stopping | Stopped]
+//      6  Cksum      Byte  0..255
 
 // A-MAS to A-BTN: Permission for A-BTN to send which turnout button was just pressed on the control panel
 // Rev: 08/31/17
-// OFFSET DESC      SIZE  CONTENTS
-//    0	  Length	  Byte	5
-//    1	  To	      Byte	4 (A_BTN)
-//    2	  From	    Byte	1 (A_MAS)
-//    3	  Msg type	Char	'B' = Button request status (sent after it sees that a button was pressed, via a digital input from A-BTN.)
-//    4	  Checksum	Byte  0..255
+// OFFSET  DESC       SIZE  CONTENTS
+//      0  Length     Byte  5
+//      1  To         Byte  4 (A_BTN)
+//      2  From       Byte  1 (A_MAS)
+//      3  Msg type   Char  'B' = Button request status (sent after it sees that a button was pressed, via a digital input from A-BTN.)
+//      4  Checksum   Byte  0..255
 
 // A-BTN to A-MAS: Sending the number of the turnout button that was just pressed on the control panel
 // Rev: 08/31/17
-// OFFSET DESC      SIZE  CONTENTS
-//    0	  Length	  Byte	6
-//    1	  To	      Byte	1 (A_MAS)
-//    2	  From	    Byte	4 (A_BTN)
-//    3	  Msg type	Char	'B' = Button press update
-//    4	  Button No.Byte  1..32
-//    5	  Checksum	Byte  0..255
+// OFFSET  DESC       SIZE  CONTENTS
+//      0  Length     Byte  6
+//      1  To         Byte  1 (A_MAS)
+//      2  From       Byte  4 (A_BTN)
+//      3  Msg type   Char  'B' = Button press update
+//      4  Button No. Byte  1..32
+//      5  Checksum   Byte  0..255
 
 // A-MAS to A-SNS:  Permission for A_SNS to send a sensor change record.
 // Rev: 08/31/17
-// OFFSET  DESC      SIZE  CONTENTS
-//    0	   Length	   Byte	 5
-//    1	   To	       Byte	 3 (A_SNS)
-//    2	   From	     Byte	 1 (A_MAS)
-//    3    Command   Char  'S' Sensor status request (sent after it sees that a sensor changed, via a digital input from A-SNS.)
-//    4	   Checksum	 Byte  0..255
+// OFFSET  DESC       SIZE  CONTENTS
+//      0  Length     Byte  5
+//      1  To         Byte  3 (A_SNS)
+//      2  From       Byte  1 (A_MAS)
+//      3  Command    Char  'S' Sensor status request (sent after it sees that a sensor changed, via a digital input from A-SNS.)
+//      4  Checksum   Byte  0..255
 
 // A-SNS to A-MAS:  Sensor status update for a single sensor change
 // Rev: 08/31/17
-// OFFSET  DESC      SIZE  CONTENTS
-//    0	   Length	   Byte	 7
-//    1	   To	       Byte	 1 (A_MAS)
-//    2	   From	     Byte	 3 (A_SNS)
-//    3    Command   Char  'S' Sensor status update
-//    4    Sensor #  Byte  1..52 (Note that as of Sept 2017, our code ignores sensor 53 and we have disconnected it from the layout)
-//    5    Trip/Clr  Byte  [0|1] 0-Cleared, 1=Tripped
-//    6	   Checksum	 Byte  0..255
+// OFFSET  DESC       SIZE  CONTENTS
+//      0  Length     Byte  7
+//      1  To         Byte  1 (A_MAS)
+//      2  From       Byte  3 (A_SNS)
+//      3  Command    Char  'S' Sensor status update
+//      4  Sensor #   Byte  1..52 (Note that as of Sept 2017, our code ignores sensor 53 and we have disconnected it from the layout)
+//      5  Trip/Clr   Byte  [0|1] 0-Cleared, 1=Tripped
+//      6  Checksum   Byte  0..255
 
 // A-MAS to A-SWT:  Command to set all turnouts to Last-known position
 // Rev: 08/31/17
-// OFFSET  DESC      SIZE  CONTENTS
-//    0	   Length	   Byte	 9
-//    1	   To	       Byte	 5 (A_SWT)
-//    2	   From	     Byte	 1 (A_MAS)
-//    3    Command   Char  'L' = Last-known position
-//    4..7 Parameter Byte  32 bits: 0=Normal, 1=Reverse
-//    8	   Checksum  Byte  0..255
+// OFFSET  DESC       SIZE  CONTENTS
+//      0  Length     Byte  9
+//      1  To         Byte  5 (A_SWT)
+//      2  From       Byte  1 (A_MAS)
+//      3  Command    Char  'L' = Last-known position
+//   4..7  Parameter  Byte  32 bits: 0=Normal, 1=Reverse
+//      8  Checksum   Byte  0..255
 
 // A-MAS to A-SWT:  Command to set an individual turnout
 // Rev: 08/31/17
-// OFFSET  DESC      SIZE  CONTENTS
-//    0	   Length	   Byte	 6
-//    1	   To	       Byte	 5 (A_SWT)
-//    2	   From	     Byte	 1 (A_MAS)
-//    3    Command   Char  [N|R] Normal|Reverse
-//    4    Parameter Byte  Turnout number 1..32
-//    5	   Checksum	 Byte  0..255
+// OFFSET  DESC       SIZE  CONTENTS
+//      0  Length     Byte  6
+//      1  To         Byte  5 (A_SWT)
+//      2  From       Byte  1 (A_MAS)
+//      3  Command    Char  [N|R] Normal|Reverse
+//      4  Parameter  Byte  Turnout number 1..32
+//      5  Checksum   Byte  0..255
 
 // A-MAS to A-SWT:  Command to set a Route (regular, or Park 1 or Park 2)
 // Rev: 08/31/17
-// OFFSET  DESC      SIZE  CONTENTS
-//    0	   Length	   Byte	 6
-//    1	   To	       Byte	 5 (A_SWT)
-//    2	   From	     Byte	 1 (A_MAS)
-//    3    Command   Char  [T|1|2] rouTe|park 1|park 2
-//    4    Parameter Byte  Route number from one of the three route tables, 1..70, 1..19, or 1..4
-//    5	   Checksum	 Byte  0..255
+// OFFSET  DESC       SIZE  CONTENTS
+//      0  Length     Byte  6
+//      1  To         Byte  5 (A_SWT)
+//      2  From       Byte  1 (A_MAS)
+//      3  Command    Char  [T|1|2] rouTe|park 1|park 2
+//      4  Parameter  Byte  Route number from one of the three route tables, 1..70, 1..19, or 1..4
+//      5  Checksum   Byte  0..255
 
 // A-MAS to A-OCC: Query for operator ANSWER QUESTION via alphanumeric display.  Registration mode only.
 // Rev: 09/20/17
-// OFFSET DESC      SIZE  CONTENTS
-//    0   Length    Byte  14
-//   	1	  To	      Byte	7 (A-OCC)
-//   	2	  From	    Byte	1 (A_MAS)
-//    3   Msg Type  Char  'Q' means it's a question requires operator to select one displayed choice
-//    4   Text      Char  8 character prompt i.e. "SMOKE Y"/"SMOKE N", "FAST ON"/"SLOW ON", "AUDIO Y"/"AUDIO N"
-//  thru  ...       ...   ...
-//   11
-//   12   Last?     Char  'N' means there will be another question coming; 'Y' means all done with questions from A-MAS
-//   13	  Cksum	    Byte  0..255
+// OFFSET  DESC       SIZE  CONTENTS
+//      0  Length     Byte  14
+//      1  To         Byte  7 (A-OCC)
+//      2  From       Byte  1 (A_MAS)
+//      3  Msg Type   Char  'Q' means it's a question requires operator to select one displayed choice
+//      4  Text       Char  8 character prompt i.e. "SMOKE Y"/"SMOKE N", "FAST ON"/"SLOW ON", "AUDIO Y"/"AUDIO N"
+//   thru  ...        ...   ...
+//     11
+//     12  Last?      Char  'N' means there will be another question coming; 'Y' means all done with questions from A-MAS
+//     13  Cksum      Byte  0..255
 
 // A-OCC to A-MAS: Reply from operator with ANSWERED QUESTION via alphanumeric display.  Registration mode only.
 // Rev: 09/27/17
-// OFFSET DESC      SIZE  CONTENTS
-//    0   Length    Byte  6
-//   	1	  To	      Byte	1 (A-MAS)
-//   	2	  From	    Byte	7 (A_OCC)
-//    3   Msg Type  Char  'Q' means this is a reply to the Question that A-MAS "asked" via A-OCC's 8-char A/N display and rotary encoder.
-//    4   Reply #   Byte  0..n, where 0 was the first prompt sent by A-MAS, and so on.  I.e. zero offset, not starting with 1.
-//    5   Cksum     Byte  0..255
+// OFFSET  DESC       SIZE  CONTENTS
+//      0  Length     Byte  6
+//      1  To         Byte  1 (A-MAS)
+//      2  From       Byte  7 (A_OCC)
+//      3  Msg Type   Char  'Q' means this is a reply to the Question that A-MAS "asked" via A-OCC's 8-char A/N display and rotary encoder.
+//      4  Reply #    Byte  0..n, where 0 was the first prompt sent by A-MAS, and so on.  I.e. zero offset, not starting with 1.
+//      5  Cksum      Byte  0..255
 
 // A-MAS to A-OCC: Query for operator to REGISTER TRAIN locations.  Registration mode only.
 // Rev: 09/20/17
-// OFFSET DESC      SIZE  CONTENTS
-//    0   Length    Byte  16
-//   	1	  To	      Byte	7 (A-OCC)
-//   	2	  From	    Byte	1 (A_MAS)
-//    3   Msg Type  Char  'R' means Registration!  Ask operator to ID trains in each occupied block.
-//    4   Train No. Byte  [1..MAX_TRAINS]  (Yes, this is actual train number i.e. #1; there is no "real" train 0.)
-//    5   Train Dsc Char  8 character train "name" (from Train Reference table) prompt i.e. "WP 2345"
-//  thru  ...       ...   ...
-//   12
-//   13   Last Blk  Byte  0..TOTAL_BLOCKS.  Last-known block that this train occupied, or 0 if unknown.  Used as default.
-//   14   Last?     Char  'N' means there will be another message coming; 'Y' means all done sending list of all train prompts.
-//   15	  Cksum	    Byte  0..255
+// OFFSET  DESC       SIZE  CONTENTS
+//      0  Length     Byte  16
+//      1  To         Byte  7 (A-OCC)
+//      2  From       Byte  1 (A_MAS)
+//      3  Msg Type   Char  'R' means Registration!  Ask operator to ID trains in each occupied block.
+//      4  Train No.  Byte  [1..MAX_TRAINS]  (Yes, this is actual train number i.e. #1; there is no "real" train 0.)
+//      5  Train Dsc  Char  8 character train "name" (from Train Reference table) prompt i.e. "WP 2345"
+//   thru  ...        ...   ...
+//     12
+//     13  Last Blk   Byte  0..TOTAL_BLOCKS.  Last-known block that this train occupied, or 0 if unknown.  Used as default.
+//     14  Last?      Char  'N' means there will be another message coming; 'Y' means all done sending list of all train prompts.
+//     15  Cksum      Byte  0..255
 
 // A-OCC to A-MAS: Reply REGISTERED TRAINS from operator via alphanumeric display.  Registration mode only.
 // Rev: 09/27/17
-// OFFSET DESC      SIZE  CONTENTS
-//    0   Length    Byte  9
-//   	1	  To	      Byte	1 (A-MAS)
-//   	2	  From	    Byte	7 (A_OCC)
-//    3   Msg Type  Char  1 'R' means train Registration reply. This will always be a "real" train, never zero, never TRAIN_STATIC or TRAIN_DONE.
-//    4   Train No. Byte  [1..MAX_TRAINS]  Can only be zero if this is the last record, which contains no train data.
-//    5   Block No. Byte  [1..TOTAL_BLOCKS]  Can only be zero if this is the last record, which contains no train data.
-//    6   Block Dir Char  [E|W] Indicates which direction the train is facing withing that block.  Known based on which block sensor is tripped.
-//    7   Last?     Char  'N' means there will be another identified train message coming; 'Y' means we are done and no train data in this record.
-//    8	  Cksum	    Byte  0..255
+// OFFSET  DESC       SIZE  CONTENTS
+//      0  Length     Byte  9
+//      1  To         Byte  1 (A-MAS)
+//      2  From       Byte  7 (A_OCC)
+//      3  Msg Type   Char  1 'R' means train Registration reply. This will always be a "real" train, never zero, never TRAIN_STATIC or TRAIN_DONE.
+//      4  Train No.  Byte  [1..MAX_TRAINS]  Can only be zero if this is the last record, which contains no train data.
+//      5  Block No.  Byte  [1..TOTAL_BLOCKS]  Can only be zero if this is the last record, which contains no train data.
+//      6  Block Dir  Char  [E|W] Indicates which direction the train is facing withing that block.  Known based on which block sensor is tripped.
+//      7  Last?      Char  'N' means there will be another identified train message coming; 'Y' means we are done and no train data in this record.
+//      8  Cksum      Byte  0..255
 
 // A-MAS to A-OCC: Command to play a WAV file on the PA system, such as "Train 3945 arriving on track 5!"
 // Rev: 09/20/17
-// OFFSET DESC      SIZE  CONTENTS
-//    0   Length    Byte  13
-//   	1	  To	      Byte	7 (A-OCC)
-//   	2	  From	    Byte	1 (A_MAS)
-//    3   Msg Type  Char  'P' means it's a PA announcement command
-//    4   Phrase 1  Byte  Phrase number stored in WAV Trigger micro SD card.  i.e. 1 = "Wester Pacific Scenic Limited"
-//    5   Phrase 2  Byte  I.e. 13 = "Now departing Science City"
-//    6   Phrase 3  Byte  I.e. 52 = "Track number two"
-//    7   Phrase 4  Byte  I.e. 109 = "Aaaaaaall abooooooard!"
-//    8   Phrase 5  Byte  0 = Unused.  Cound also have special commands for pause.
-//    9   Phrase 6  Byte  0 = Unused.  Maybe "Please watch your step!"
-//   10   Phrase 7  Byte  0 = Unused.
-//   11   Phrase 8  Byte  0 = Unused.
-//   12   Checksum  Byte  0..255
+// OFFSET  DESC       SIZE  CONTENTS
+//      0  Length     Byte  13
+//      1  To         Byte  7 (A-OCC)
+//      2  From       Byte  1 (A_MAS)
+//      3  Msg Type   Char  'P' means it's a PA announcement command
+//      4  Phrase 1   Byte  Phrase number stored in WAV Trigger micro SD card.  i.e. 1 = "Wester Pacific Scenic Limited"
+//      5  Phrase 2   Byte  I.e. 13 = "Now departing Science City"
+//      6  Phrase 3   Byte  I.e. 52 = "Track number two"
+//      7  Phrase 4   Byte  I.e. 109 = "Aaaaaaall abooooooard!"
+//      8  Phrase 5   Byte  0 = Unused.  Cound also have special commands for pause.
+//      9  Phrase 6   Byte  0 = Unused.  Maybe "Please watch your step!"
+//     10  Phrase 7   Byte  0 = Unused.
+//     11  Phrase 8   Byte  0 = Unused.
+//     12  Checksum   Byte  0..255
 
 // A-MAS to A-LEG: Tell A-LEG if operator wants SMOKE, based on a/n query by A-OCC.  Registration mode only.
 // Rev: 09/27/17
-// OFFSET DESC      SIZE  CONTENTS
-//    0   Length    Byte  6
-//   	1	  To	      Byte	2 (A-LEG)
-//   	2	  From	    Byte	1 (A_MAS)
-//    3   Msg Type  Char  'S' = Smoke for locos, yes or no
-//    4   Reply     Char  [Y|N]
-//    5   Cksum     Byte  0..255
+// OFFSET  DESC       SIZE  CONTENTS
+//      0  Length     Byte  6
+//      1  To         Byte  2 (A-LEG)
+//      2  From       Byte  1 (A_MAS)
+//      3  Msg Type   Char  'S' = Smoke for locos, yes or no
+//      4  Reply      Char  [Y|N]
+//      5  Cksum      Byte  0..255
 
 // A-MAS to A-LEG: Tell A-LEG if operator wants FAST or SLOW loco startup, based on a/n query by A-OCC.  Registration mode only.
 // Rev: 09/27/17
-// OFFSET DESC      SIZE  CONTENTS
-//    0   Length    Byte  6
-//   	1	  To	      Byte	2 (A-LEG)
-//   	2	  From	    Byte	1 (A_MAS)
-//    3   Msg Type  Char  'F' = Does operator want fast or slow loco startup at registration?
-//    4   Reply     Char  [F|S]
-//    5   Cksum     Byte  0..255
+// OFFSET  DESC       SIZE  CONTENTS
+//      0  Length     Byte  6
+//      1  To         Byte  2 (A-LEG)
+//      2  From       Byte  1 (A_MAS)
+//      3  Msg Type   Char  'F' = Does operator want fast or slow loco startup at registration?
+//      4  Reply      Char  [F|S]
+//      5  Cksum      Byte  0..255
 
 // **************************************************************************************************************************
 

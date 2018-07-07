@@ -1,22 +1,22 @@
-// Rev: 05/06/18
-// Command_RS485 handles RS485 (and *not* digital-pin) communications, via a specified serial port.
+// Rev: 07/07/18
+// Message_RS485 handles RS485 (and *not* digital-pin) communications, via a specified serial port.
 
-#include <Command_RS485.h>
+#include <Message_RS485.h>
 
-Command_RS485::Command_RS485(HardwareSerial * hdwrSerial, long unsigned int baud, Display_2004 * LCD2004) {  // Constructor
+Message_RS485::Message_RS485(HardwareSerial * hdwrSerial, long unsigned int baud, Display_2004 * LCD2004) {  // Constructor
   mySerial = hdwrSerial;  // Pointer to the serial port we want to use for RS485
   myBaud = baud;          // Serial port baud rate
   myLCD = LCD2004;        // Pointer to the LCD display for error messages
 }
 
-void Command_RS485::InitPort() {
+void Message_RS485::InitPort() {
   // Initialize the serial port that this object will be using...
 
   mySerial->begin(myBaud);
 
 }
 
-bool Command_RS485::RS485GetMessage(byte tMsg[]) {
+bool Message_RS485::RS485GetMessage(byte tMsg[]) {
   // Returns true or false, depending if a complete message was read.
   // If this function returns true, then we are guaranteed to have a real/accurate message in the buffer, including good CRC.
   // However, this function does not check if it is to "us" (this Arduino) or not.  That's because 1) the child class will do that,
@@ -67,7 +67,7 @@ bool Command_RS485::RS485GetMessage(byte tMsg[]) {
   }
 }
 
-void Command_RS485::RS485SendMessage(byte tMsg[]) {
+void Message_RS485::RS485SendMessage(byte tMsg[]) {
   // This routine must *only* be called when an entire message is ready to write, not a byte at a time.
   // This version, as part of the RS485 message class, automatically calculates and adds the CRC checksum.
   digitalWrite(PIN_RS485_TX_LED, HIGH);       // Turn on the transmit LED
@@ -83,7 +83,7 @@ void Command_RS485::RS485SendMessage(byte tMsg[]) {
   return;
 }
 
-byte Command_RS485::calcChecksumCRC8(const byte data[], byte len) {
+byte Message_RS485::calcChecksumCRC8(const byte data[], byte len) {
   // calcChecksumCRC8 returns the CRC-8 checksum to use or confirm.
   // Used for RS485 messages
   // Sample call: msg[msgLen - 1] = calcChecksumCRC8(msg, msgLen - 1);
@@ -104,38 +104,38 @@ byte Command_RS485::calcChecksumCRC8(const byte data[], byte len) {
   return crc;
 }
 
-byte Command_RS485::GetLen(byte tMsg[]) {
+byte Message_RS485::GetLen(byte tMsg[]) {
   return tMsg[RS485_LEN_OFFSET];
 }
 
-byte Command_RS485::GetTo(byte tMsg[]) {
+byte Message_RS485::GetTo(byte tMsg[]) {
   return tMsg[RS485_TO_OFFSET];
 }
 
-byte Command_RS485::GetFrom(byte tMsg[]) {
+byte Message_RS485::GetFrom(byte tMsg[]) {
   return tMsg[RS485_FROM_OFFSET];
 }
 
-char Command_RS485::GetType(byte tMsg[]) {
+char Message_RS485::GetType(byte tMsg[]) {
   return tMsg[RS485_TYPE_OFFSET];
 }
 
-void Command_RS485::SetLen(byte tMsg[], byte len) {
+void Message_RS485::SetLen(byte tMsg[], byte len) {
   tMsg[RS485_LEN_OFFSET] = len;
   return;
 }
 
-void Command_RS485::SetTo(byte tMsg[], byte to) {
+void Message_RS485::SetTo(byte tMsg[], byte to) {
   tMsg[RS485_TO_OFFSET] = to;
   return;
 }
 
-void Command_RS485::SetFrom(byte tMsg[], byte from) {
+void Message_RS485::SetFrom(byte tMsg[], byte from) {
   tMsg[RS485_FROM_OFFSET] = from;
   return;
 }
 
-void Command_RS485::SetType(byte tMsg[], char type) {
+void Message_RS485::SetType(byte tMsg[], char type) {
   tMsg[RS485_TYPE_OFFSET] = type;
   return;
 }

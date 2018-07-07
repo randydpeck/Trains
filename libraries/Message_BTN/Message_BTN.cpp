@@ -1,14 +1,14 @@
-// Rev: 05/06/18
-// Command_TST is a child class of Message_RS485, and handles all RS485 and digital pin messages for test.ino.
+// Rev: 07/07/18
+// Message_BTN is a child class of Message_RS485, and handles all RS485 and digital pin messages for test.ino.
 
-#include <Command_TST.h>
+#include <Message_BTN.h>
 
 // xxxxxxxxxx  Because A_SWT only receives messages and does not send any, this class does not include any "send" logic.
 // xxxxxxxxxxxx Because A_SWT does not send or receive any digital messages (i.e. Arduino pins), this class does not include that logic either.
 // A_BTN both sends and receives RS485 messages, and also needs to send a digital signal.
 
 // Here is how you call the Parent constructor from the child constructor, passing it the parameter(s) it needs.
-Command_TST::Command_TST(HardwareSerial * hdwrSerial, long unsigned int baud, Display_2004 * LCD2004) : Command_RS485(hdwrSerial, baud, LCD2004) {
+Message_BTN::Message_BTN(HardwareSerial * hdwrSerial, long unsigned int baud, Display_2004 * LCD2004) : Message_RS485(hdwrSerial, baud, LCD2004) {
 
   mySerial = hdwrSerial;  // Pointer to the serial port we want to use for RS485 (probably not needed here)
   myBaud = baud;          // Serial port baud rate (probably not needed here)
@@ -16,28 +16,28 @@ Command_TST::Command_TST(HardwareSerial * hdwrSerial, long unsigned int baud, Di
   
 }
 
-void Command_TST::Init() {
+void Message_BTN::Init() {
 
-  Command_RS485::InitPort();
+  Message_RS485::InitPort();
   return;
 
 }
 
-void Command_TST::Send(byte tMsg[]) {
+void Message_BTN::Send(byte tMsg[]) {
 
-  Command_RS485::RS485SendMessage(tMsg);
+  Message_RS485::RS485SendMessage(tMsg);
   return;
  
 }
 
-bool Command_TST::Receive(byte tMsg[]) {
+bool Message_BTN::Receive(byte tMsg[]) {
 
   // Try to retrieve a complete incoming message.  
   // Return false if 1) There was no message; or 2) The message is not one that this module cares about.
   // Return true if there was a complete message *and* it's one that we want to see.
 
   // First see if there is a valid message of any type...
-  if ((Command_RS485::RS485GetMessage(tMsg)) == false) return false;
+  if ((Message_RS485::RS485GetMessage(tMsg)) == false) return false;
   return true;
   // Okay, there was a real message found and it's stored in tMsg[].
   // Decide if it's a message that this module even cares about, based on From, To, and Message type.
@@ -54,7 +54,7 @@ bool Command_TST::Receive(byte tMsg[]) {
   }
 }
 
-void Command_TST::SendTurnoutButtonPress(const byte button) {
+void Message_BTN::SendTurnoutButtonPress(const byte button) {
 
   // In order to send a button press RS485 message to A_MAS, we must first ask permission via a digital signal wire.
   // Pull the line low, and wait for an incoming button-number request from A_MAS, then set the digital line back
@@ -110,12 +110,12 @@ void Command_TST::SendTurnoutButtonPress(const byte button) {
   return;
 }
 
-void Command_TST::SetTurnoutButtonNum(byte tMsg[], byte button) {  // Inserts button number into the appropriate byte
+void Message_BTN::SetTurnoutButtonNum(byte tMsg[], byte button) {  // Inserts button number into the appropriate byte
   tMsg[RS485_BTN_BUTTON_NO_OFFSET] = button;
   return;
 }
 
-byte Command_TST::GetTurnoutButtonPress() {
+byte Message_BTN::GetTurnoutButtonPress() {
 
   // This is only called (periodically) when in MANUAL and maybe P.O.V. modes.
   // Checks to see if operator pressed a "throw turnout" button on the control panel, and executes if so.
@@ -172,6 +172,6 @@ byte Command_TST::GetTurnoutButtonPress() {
   }
 }
 
-byte Command_TST::GetTurnoutButtonNum(byte tMsg[]) {
+byte Message_BTN::GetTurnoutButtonNum(byte tMsg[]) {
   return tMsg[RS485_BTN_BUTTON_NO_OFFSET];
 }

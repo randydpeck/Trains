@@ -1,5 +1,5 @@
 #include <Train_Consts_Global.h>
-char APPVERSION[LCD_WIDTH + 1] = "A-BTN Rev. 10/01/17";
+char APPVERSION[LCD_WIDTH + 1] = "A-BTN Rev. 07/07/18";
 const byte THIS_MODULE = ARDUINO_BTN;  // Not sure if/where I will use this - intended if I call a common function but will this "global" be seen there?
 
 // A_BTN watches for control panel pushbutton presses by operator, and transmits that info to A_MAS.
@@ -11,7 +11,7 @@ const byte THIS_MODULE = ARDUINO_BTN;  // Not sure if/where I will use this - in
 // 09/16/17: Brought a lot of loop code out to functions; much streamlining, variable re-naming.
 // 09/13/17: Changed variable suffixes and constant names for better programming form.
 // 08/28/17: Const LCD width, converted some inline loop code to functions, added RS485 protocol comments, and other clean-up.
-// 11/01/16: InitializeShiftRegisterPins() and delay in LCD2004.send()
+// 11/01/16: InitializeShiftRegisterPins() and delay in LCD.send()
 // 11/01/16: updated "delay between button release and next press" logic.
 // 11/01/16: ALSO was getting RS485 input buf overflow if I started and stopped Manual mode constantly and pressed a ton of buttons constantly.
 // I think that problem is fixed.  Regardless, it only happened if I go hog wild pressing buttons and changing modes.
@@ -25,33 +25,33 @@ const byte THIS_MODULE = ARDUINO_BTN;  // Not sure if/where I will use this - in
 
 // A-MAS BROADCAST: Mode change.  We care about mode because we only look for control panel turnout button presses while in Manual mode, Running state.
 // Rev: 08/31/17
-// OFFSET DESC      SIZE  CONTENTS
-//   	0	  Length	  Byte	7
-//   	1	  To	      Byte	99 (ALL)
-//   	2	  From	    Byte	1 (A_MAS)
-//    3   Msg Type  Char  'M' means this is a Mode/State update command
-//   	4	  Mode	    Byte  1..5 [Manual | Register | Auto | Park | POV]
-//   	5	  State	    Byte  1..3 [Running | Stopping | Stopped]
-//   	6	  Cksum	    Byte  0..255
+// OFFSET  DESC       SIZE  CONTENTS
+//      0  Length     Byte  7
+//      1  To         Byte  99 (ALL)
+//      2  From       Byte  1 (A_MAS)
+//      3  Msg Type   Char  'M' means this is a Mode/State update message
+//      4  Mode       Byte  1..5 [Manual | Register | Auto | Park | POV]
+//      5  State      Byte  1..3 [Running | Stopping | Stopped]
+//      6  Cksum      Byte  0..255
 
 // A-MAS to A-BTN: Permission for A-BTN to send which turnout button was just pressed on the control panel
 // Rev: 08/31/17
-// OFFSET DESC      SIZE  CONTENTS
-//    0	  Length	  Byte	5
-//    1	  To	      Byte	4 (A_BTN)
-//    2	  From	    Byte	1 (A_MAS)
-//    3	  Msg type	Char	'B' = Button request status (sent after it sees that a button was pressed, via a digital input from A-BTN.)
-//    4	  Checksum	Byte  0..255
+// OFFSET  DESC       SIZE  CONTENTS
+//      0  Length     Byte  5
+//      1  To         Byte  4 (A_BTN)
+//      2  From       Byte  1 (A_MAS)
+//      3  Msg type   Char  'B' = Button request status (sent after it sees that a button was pressed, via a digital input from A-BTN.)
+//      4  Checksum   Byte  0..255
 
 // A-BTN to A-MAS: Sending the number of the turnout button that was just pressed on the control panel
 // Rev: 08/31/17
-// OFFSET DESC      SIZE  CONTENTS
-//    0	  Length	  Byte	6
-//    1	  To	      Byte	1 (A_MAS)
-//    2	  From	    Byte	4 (A_BTN)
-//    3	  Msg type	Char	'B' = Button press update
-//    4	  Button No.Byte  1..32
-//    5	  Checksum	Byte  0..255
+// OFFSET  DESC       SIZE  CONTENTS
+//      0  Length     Byte  6
+//      1  To         Byte  1 (A_MAS)
+//      2  From       Byte  4 (A_BTN)
+//      3  Msg type   Char  'B' = Button press update
+//      4  Button No. Byte  1..32
+//      5  Checksum   Byte  0..255
 
 // **************************************************************************************************************************
 
@@ -60,18 +60,29 @@ byte modeCurrent  = MODE_UNDEFINED;
 byte stateCurrent = STATE_STOPPED;
                               
 // *** SERIAL LCD DISPLAY CLASS:
-#include <Display_2004.h>                   // Class in quotes = in the A_SWT directory; angle brackets = in the library directory.
-// Instantiate a Display_2004 object called "LCD2004".
-// Pass address of serial port to use (0..3) such as &Serial1, and baud rate such as 9600 or 115200.
-Display_2004 LCD2004(&Serial1, 9600);     // Instantiate 2004 LCD display "LCD2004."
-Display_2004 * ptrLCD2004;                  // Pointer will be passed to any other classes that need to be able to write to the LCD display.
-char lcdString[LCD_WIDTH + 1];              // Global array to hold strings sent to Digole 2004 LCD; last char is for null terminator.
+#define _Digole_Serial_UART_                  // To tell compiler compile the serial communication only
+#include <DigoleSerial.h>                     // Tell the compiler to use the DigoleSerial class library
+// DigoleSerialDisp needs serial port address i.e. &Serial, &Serial1, &Serial2, or &Serial3.
+// DigoleSerialDisp also needs a valid baud rate, typically 9600 or 115200.
+DigoleSerialDisp digoleLCD(&Serial1, 115200); // Instantiate and name the Digole 2004 LCD object, parent of Display_2004 class
+#include <Display_2004.h>                     // Our LCD message-display library
+Display_2004 LCD(&digoleLCD);                 // Instantiate our LCD object "LCD" by passing a pointer to the Digole LCD object.
+char lcdString[LCD_WIDTH + 1];                // Global array to hold strings sent to Digole 2004 LCD; last char is for null terminator.
 
-// *** MESSAGE CLASS (Inter-Arduino communications):
-#include <Message_BTN.h>
-Message_BTN Message(&Serial2, ptrLCD2004);  // Instantiate message object "Message"; requires a pointer to the hardware serial port, and the 2004 LCD display
-byte MsgIncoming[RS485_MAX_LEN];            // Global array for incoming inter-Arduino messages.  No need to init contents.  Probably shouldn't call them "RS485" though.
-byte MsgOutgoing[RS485_MAX_LEN];            // No need to initialize contents.
+// Instantiate a Display_2004 object called "LCD".
+// Pass address of serial port to use (0..3) such as &Serial1, and baud rate such as 9600 or 115200.
+//Display_2004 LCD(&Serial1, 9600);     // Instantiate 2004 LCD display "LCD."
+//Display_2004 * ptrLCD;                  // Pointer will be passed to any other classes that need to be able to write to the LCD display.
+
+
+// *** RS485 & Digital Pin MESSAGE CLASS (Inter-Arduino communications):
+//#include <Message_BTN.h>
+#include <Message_BTN.h>                      // This module's communitcation class, in its .ini directory
+//Message_BTN Message(&Serial2, ptrLCD);  // Instantiate message object "Message"; requires a pointer to the hardware serial port, and the 2004 LCD display
+Message_BTN Message(&Serial2, 115200, &LCD);  // Instantiate our RS485/digital communications object "Message"
+byte MsgIncoming[RS485_MAX_LEN];              // Global array for incoming inter-Arduino messages.  No need to init contents.
+byte MsgOutgoing[RS485_MAX_LEN];              // No need to initialize contents.
+
 
 // *** SHIFT REGISTER: The following lines are required by the Centipede input/output shift registers.
 #include <Wire.h>                 // Needed for Centipede shift register
@@ -79,7 +90,7 @@ byte MsgOutgoing[RS485_MAX_LEN];            // No need to initialize contents.
 Centipede shiftRegister;          // create Centipede shift register object
 
 // *** MISC CONSTANTS AND GLOBALS: needed by A-BTN:
-const byte TOTAL_TURNOUTS            =  32;  // How many input bits on Centipede shift register to check.  30 connected, but 32 relays.
+//const byte TOTAL_TURNOUTS            =  32;  // How many input bits on Centipede shift register to check.  30 connected, but 32 relays.
 unsigned long lastReleaseTimeMS      =   0;  // To prevent operator from pressing turnout buttons too quickly
 const unsigned long RELEASE_DELAY_MS = 200;  // Force operator to wait this many milliseconds between presses
 
@@ -89,8 +100,8 @@ const unsigned long RELEASE_DELAY_MS = 200;  // Force operator to wait this many
 
 void setup() {
 
-  LCD2004.init();                       // Initialize the 20 x 04 Digole serial LCD display
-  delay(1000);
+  LCD.init();                       // Initialize the 20 x 04 Digole serial LCD display
+  // delay(1000); (Delay not needed in setup - it's included in LCD init)
   Serial.begin(115200);                 // PC serial monitor window
   // Serial1 is for the Digole 20x4 LCD debug display, already set up
   Serial2.begin(115200);                // RS485  up to 115200 ********** THIS SHOULD BE MOVED INTO Message_RS485.h/.cpp and commented out here
@@ -101,10 +112,10 @@ void setup() {
   
   sprintf(lcdString, APPVERSION);       // Display the application version number on the LCD display
   Serial.println(lcdString);
-  LCD2004.send(lcdString);
+  LCD.send(lcdString);
 
 
-  Message.Hello();
+  //Message.Hello();
 
 }
 
@@ -220,7 +231,7 @@ byte turnoutButtonPressed() {
       bp = pinNum + 1;  // i.e. pin 0 = button/turnout 1
       chirp();  // operator feedback!
       sprintf(lcdString, "Button %2i pressed.", bp);
-      LCD2004.send(lcdString);
+      LCD.send(lcdString);
       Serial.println(lcdString);
       break;
     }
@@ -250,7 +261,7 @@ void sendRS485ButtonPressUpdate(const byte tButtonPressed) {
   // First pull PIN_REQ_TX_A_BTN_OUT digital line low, to tell A-MAS that we want to send it a "turnout button pressed" message...
   digitalWrite(PIN_REQ_TX_A_BTN_OUT, LOW);
 
-  // Wait for an RS485 command from A-MAS requesting button status.  Remember that it's possible that we may
+  // Wait for an RS485 message from A-MAS requesting button status.  Remember that it's possible that we may
   // receive some RS485 messages that are irrelevant first, so ignore all RS485 messages until we see one to A-BTN.
   // If there is no new message, then MsgIncoming will remain unchanged - whatever it was before.  Since the previous
   // message might have been to us, we'd better overwrite that attribute so we won't think it's a new message.
@@ -262,11 +273,11 @@ void sendRS485ButtonPressUpdate(const byte tButtonPressed) {
   } while ((Message.GetTo(MsgIncoming)) != ARDUINO_BTN);
 
   // Now we have an RS485 message sent to A_BTN.  Just for fun, let's confirm that it's from A_MAS, and that we
-  // have the appropriate "request" command we are expecting...
+  // have the appropriate "request" message we are expecting...
   // If not coming from A_MAS or not an 'B'-type (button press) request, something is wrong.
   if ((Message.GetFrom(MsgIncoming) != ARDUINO_MAS) || (Message.GetType(MsgIncoming) != 'B')) {
     sprintf(lcdString, "Unexpected message!");
-    LCD2004.send(lcdString);
+    LCD.send(lcdString);
     Serial.print(lcdString);
     endWithFlashingLED(6);
   }
@@ -340,12 +351,12 @@ void checkIfHaltPinPulledLow() {
 
       chirp();
       sprintf(lcdString, "%.20s", "HALT pin low!  End.");
-      LCD2004.send(lcdString);
+      LCD.send(lcdString);
       Serial.println(lcdString);
       while (true) { }  // For a real halt, just loop forever.
     } else {
       sprintf(lcdString, "False HALT detected.");
-      LCD2004.send(lcdString);
+      LCD.send(lcdString);
       Serial.println(lcdString);
     }
   }

@@ -19,21 +19,21 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Populate_FRAM_Route_Referen
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{E1C96850-FE20-4894-9451-B525582482F9}"
 	ProjectSection(SolutionItems) = preProject
-		libraries\Command_RS485\Command_RS485.cpp = libraries\Command_RS485\Command_RS485.cpp
-		libraries\Command_RS485\Command_RS485.h = libraries\Command_RS485\Command_RS485.h
-		libraries\Command_TST\Command_TST.cpp = libraries\Command_TST\Command_TST.cpp
-		libraries\Command_TST\Command_TST.h = libraries\Command_TST\Command_TST.h
 		libraries\Display_2004\Display_2004.cpp = libraries\Display_2004\Display_2004.cpp
 		libraries\Display_2004\Display_2004.h = libraries\Display_2004\Display_2004.h
+		libraries\Message_BTN\Message_BTN.cpp = libraries\Message_BTN\Message_BTN.cpp
+		libraries\Message_BTN\Message_BTN.h = libraries\Message_BTN\Message_BTN.h
+		libraries\Message_RS485\Message_RS485.cpp = libraries\Message_RS485\Message_RS485.cpp
+		libraries\Message_RS485\Message_RS485.h = libraries\Message_RS485\Message_RS485.h
 		libraries\Train_Consts_Global\Train_Consts_Global.cpp = libraries\Train_Consts_Global\Train_Consts_Global.cpp
 		libraries\Train_Consts_Global\Train_Consts_Global.h = libraries\Train_Consts_Global\Train_Consts_Global.h
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test", "test\test.vcxproj", "{83A9AEF2-6E4F-4373-8DC4-BA1C2CD45D31}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "A_BTN", "A_BTN\A_BTN.vcxproj", "{C47C1EE5-2454-4BB5-AF9E-8AB4269B0BF6}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "A_SWT", "A_SWT\A_SWT.vcxproj", "{831DD05E-32CF-425F-A865-A4D2DF8A65FE}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test", "test\test.vcxproj", "{D622ABA1-CF54-457A-8DCB-916B0C920E2C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -69,10 +69,6 @@ Global
 		{61A74D39-F74D-49E9-A55F-71375CCBEED5}.Debug|x86.Build.0 = Release|Win32
 		{61A74D39-F74D-49E9-A55F-71375CCBEED5}.Release|x86.ActiveCfg = Release|Win32
 		{61A74D39-F74D-49E9-A55F-71375CCBEED5}.Release|x86.Build.0 = Release|Win32
-		{83A9AEF2-6E4F-4373-8DC4-BA1C2CD45D31}.Debug|x86.ActiveCfg = Debug|Win32
-		{83A9AEF2-6E4F-4373-8DC4-BA1C2CD45D31}.Debug|x86.Build.0 = Debug|Win32
-		{83A9AEF2-6E4F-4373-8DC4-BA1C2CD45D31}.Release|x86.ActiveCfg = Release|Win32
-		{83A9AEF2-6E4F-4373-8DC4-BA1C2CD45D31}.Release|x86.Build.0 = Release|Win32
 		{C47C1EE5-2454-4BB5-AF9E-8AB4269B0BF6}.Debug|x86.ActiveCfg = Debug|Win32
 		{C47C1EE5-2454-4BB5-AF9E-8AB4269B0BF6}.Debug|x86.Build.0 = Debug|Win32
 		{C47C1EE5-2454-4BB5-AF9E-8AB4269B0BF6}.Release|x86.ActiveCfg = Release|Win32
@@ -81,6 +77,10 @@ Global
 		{831DD05E-32CF-425F-A865-A4D2DF8A65FE}.Debug|x86.Build.0 = Debug|Win32
 		{831DD05E-32CF-425F-A865-A4D2DF8A65FE}.Release|x86.ActiveCfg = Release|Win32
 		{831DD05E-32CF-425F-A865-A4D2DF8A65FE}.Release|x86.Build.0 = Release|Win32
+		{D622ABA1-CF54-457A-8DCB-916B0C920E2C}.Debug|x86.ActiveCfg = Debug|Win32
+		{D622ABA1-CF54-457A-8DCB-916B0C920E2C}.Debug|x86.Build.0 = Debug|Win32
+		{D622ABA1-CF54-457A-8DCB-916B0C920E2C}.Release|x86.ActiveCfg = Release|Win32
+		{D622ABA1-CF54-457A-8DCB-916B0C920E2C}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

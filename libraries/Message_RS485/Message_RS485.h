@@ -1,20 +1,20 @@
-// Rev: 05/06/18
-// Command_RS485 handles RS485 (and *not* digital-pin) communications, via a specified serial port.
+// Rev: 07/07/18
+// Message_RS485 handles RS485 (and *not* digital-pin) communications, via a specified serial port.
 
 // This class does *not* contain the byte-level/field-level knowledge of RS485 messages specific to each module.
-// However, it does know the byte locations of the fields for LENGHT, TO, FROM, and TYPE, and handles checksums.
+// However, it does know the byte locations of the fields for LENGTH, TO, FROM, and TYPE, and handles checksums.
 
-#ifndef COMMAND_485_H
-#define COMMAND_485_H
+#ifndef MESSAGE_485_H
+#define MESSAGE_485_H
 
 #include <Train_Consts_Global.h>
 #include <Display_2004.h>  // WE SHOULD SEE IF WE CAN JUST FORWARD-DECLARE THIS SINCE WE'RE ONLY USING A POINTER TO THE LCD
 
-class Command_RS485
+class Message_RS485
 {
   public:
 
-    Command_RS485(HardwareSerial * hdwrSerial, long unsigned int baud, Display_2004 * LCD2004);
+    Message_RS485(HardwareSerial * hdwrSerial, long unsigned int baud, Display_2004 * LCD2004);
     // Constructor
   
     void InitPort();
