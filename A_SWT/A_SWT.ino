@@ -81,8 +81,8 @@ char lcdString[LCD_WIDTH + 1];           // Global array to hold strings sent to
 // *** RS485/DIGITAL MESSAGE CLASS (Inter-Arduino communications):
 #include <Message_SWT.h>                 // Class includes all messages sent and received by A_SWT, including parent messages.
 Message_SWT Message(ptrLCD2004);         // Instantiate message object "Message"; requires a pointer to the 2004 LCD display
-byte MsgIncoming[RS485_MAX_LEN];         // Global array for incoming inter-Arduino messages.  No need to init contents.  Probably shouldn't call them "RS485" though.
-// byte MsgOutgoing[RS485_MAX_LEN];    No need to initialize contents.  Also, A_SWT doesn't send any messages, not even digital lines.
+byte msgIncoming[RS485_MAX_LEN];         // Global array for incoming inter-Arduino messages.  No need to init contents.  Probably shouldn't call them "RS485" though.
+// byte msgOutgoing[RS485_MAX_LEN];    No need to initialize contents.  Also, A_SWT doesn't send any messages, not even digital lines.
 
 // *** SHIFT REGISTER CLASS:
 #include <Wire.h>                        // Needed for Centipede shift register.
@@ -271,12 +271,12 @@ void loop() {
   checkIfHaltPinPulledLow();  // If someone has pulled the Halt pin low, release relays and just stop
 
   // See if we have an incoming RS485 message...
-//  if (Message.RS485GetMessage(MsgIncoming)) {   // If returns true, then we got a complete RS485 message (may or may not be for us)
-  if (Message.Receive(MsgIncoming)) {   // If returns true, then we got a complete RS485 message (may or may not be for us)
-//    if (MsgIncoming[RS485_TO_OFFSET] == ARDUINO_SWT) {
-    if ((Message.GetTo(MsgIncoming)) == ARDUINO_SWT) {
+//  if (Message.RS485GetMessage(msgIncoming)) {   // If returns true, then we got a complete RS485 message (may or may not be for us)
+  if (Message.receive(msgIncoming)) {   // If returns true, then we got a complete RS485 message (may or may not be for us)
+//    if (msgIncoming[RS485_TO_OFFSET] == ARDUINO_SWT) {
+    if ((Message.GetTo(msgIncoming)) == ARDUINO_SWT) {
       // The incoming message was for us!  It will either be to set a Turnout or a Route or a sting of bits for "last-known" from A-MAS.
-      // Byte #3 of MsgIncoming can be 'N' or 'R', for Normal or Revers with a turnout number, or 'T' (for rouTe) or '1' (for Park 1) or
+      // Byte #3 of msgIncoming can be 'N' or 'R', for Normal or Revers with a turnout number, or 'T' (for rouTe) or '1' (for Park 1) or
       // '2' (for Park 2) with a route number, or 'L' for "set to Last-known turnout positions" followed by a 4-byte = 32-bit data of
       // 0=Normal, 1=Reverse, and each bit corresponds to the turnout number in question (offset by 1), starting with bit 0 = turnout #1.
       // i.e. 'R08' = Turnout #8 reverse
@@ -286,19 +286,19 @@ void loop() {
       // i.e. 'L2395' = Set all 32 turnouts as indicated by bit pattern 2395.  Each byte treated as independent 8 bits.
 
       // *** IS THIS A SINGLE TURNOUT COMMAND i.e. "Set turnout #14 to Reverse"?
-//      if ((MsgIncoming[3] == 'N') || (MsgIncoming[3] == 'R')) {    // Discrete Normal|Reverse turnout command
-      if ((Message.GetType(MsgIncoming) == 'N') || (Message.GetType(MsgIncoming) == 'R')) {    // Discrete Normal|Reverse turnout command
-        sprintf(lcdString, "Received: %2i %c", MsgIncoming[4], MsgIncoming[3]);
+//      if ((msgIncoming[3] == 'N') || (msgIncoming[3] == 'R')) {    // Discrete Normal|Reverse turnout command
+      if ((Message.getType(msgIncoming) == 'N') || (Message.getType(msgIncoming) == 'R')) {    // Discrete Normal|Reverse turnout command
+        sprintf(lcdString, "Received: %2i %c", msgIncoming[4], msgIncoming[3]);
         LCD2004.send(lcdString);
         Serial.println(lcdString);
         // Add the turnout command to the circular buffer for later processing...
-        turnoutCmdBufEnqueue(MsgIncoming[3], MsgIncoming[4]);
+        turnoutCmdBufEnqueue(msgIncoming[3], msgIncoming[4]);
 
       // *** IS THIS A ROUTE (not PARK1 or PARK2) COMMAND i.e. "Set all turnouts to be aligned for Route 47"
-//      } else if (MsgIncoming[3] == 'T') {    // rouTe command, so create a bunch of turnout commands...
-      } else if (Message.GetType(MsgIncoming) == 'T') {    // rouTe command, so create a bunch of turnout commands...
-        byte routeNum = MsgIncoming[4];
-        sprintf(lcdString, "Route: %2i", MsgIncoming[4]);
+//      } else if (msgIncoming[3] == 'T') {    // rouTe command, so create a bunch of turnout commands...
+      } else if (Message.getType(msgIncoming) == 'T') {    // rouTe command, so create a bunch of turnout commands...
+        byte routeNum = msgIncoming[4];
+        sprintf(lcdString, "Route: %2i", msgIncoming[4]);
         LCD2004.send(lcdString);
         Serial.println(lcdString);
         // Retrieve route number "routeNum" from Route Reference table (FRAM1) and create a new record in the
@@ -332,9 +332,9 @@ void loop() {
           }
         }
 
-//      } else if (MsgIncoming[3] == '1') {    // 'Park 1' route command, so create a bunch of turnout commands...
-      } else if (Message.GetType(MsgIncoming) == '1') {    // 'Park 1' route command, so create a bunch of turnout commands...
-        byte routeNum = MsgIncoming[4];
+//      } else if (msgIncoming[3] == '1') {    // 'Park 1' route command, so create a bunch of turnout commands...
+      } else if (Message.getType(msgIncoming) == '1') {    // 'Park 1' route command, so create a bunch of turnout commands...
+        byte routeNum = msgIncoming[4];
         sprintf(lcdString, "Park 1 route %2i", routeNum);
         LCD2004.send(lcdString);
         Serial.println(lcdString);
@@ -368,9 +368,9 @@ void loop() {
             endWithFlashingLED(3);
           }
         }
-//      } else if (MsgIncoming[3] == '2') {    // 'Park 2' route command, so create a bunch of turnout commands...
-      } else if (Message.GetType(MsgIncoming) == '2') {    // 'Park 2' route command, so create a bunch of turnout commands...
-        byte routeNum = MsgIncoming[4];
+//      } else if (msgIncoming[3] == '2') {    // 'Park 2' route command, so create a bunch of turnout commands...
+      } else if (Message.getType(msgIncoming) == '2') {    // 'Park 2' route command, so create a bunch of turnout commands...
+        byte routeNum = msgIncoming[4];
         sprintf(lcdString, "Park 2 route %2i", routeNum);
         LCD2004.send(lcdString);
         Serial.println(lcdString);
@@ -404,8 +404,8 @@ void loop() {
             endWithFlashingLED(3);
           }
         }
-//      } else if (MsgIncoming[3] == 'L') {    // Last-known-orientation command, so create a turnout command for each bit in next 4 bytes...
-      } else if (Message.GetType(MsgIncoming) == 'L') {    // Last-known-orientation command, so create a turnout command for each bit in next 4 bytes...
+//      } else if (msgIncoming[3] == 'L') {    // Last-known-orientation command, so create a turnout command for each bit in next 4 bytes...
+      } else if (Message.getType(msgIncoming) == 'L') {    // Last-known-orientation command, so create a turnout command for each bit in next 4 bytes...
         // i.e. 'L2395' = Set all 32 turnouts as indicated by bit pattern 2395.
         // Read each of 32 bits and populate the turnout command circular buffer with 32 new records.
         sprintf(lcdString, "%.20s", "Set last-known-route");
@@ -414,7 +414,7 @@ void loop() {
         for (byte i = 0; i < 4; i++) {   // i represents each of the four bytes of turnout data
           for (byte j = 0; j < 8; j++) {  // j represents each bit of a byte
             byte k = (i * 8) + j + 1;         // k represents turnout number (1..32)
-            if (bitRead(MsgIncoming[RS485_LAST_KNOWN_OFFSET + i], j) == 0) {  // Bit is zero, so set turnout Normal
+            if (bitRead(msgIncoming[RS485_LAST_KNOWN_OFFSET + i], j) == 0) {  // Bit is zero, so set turnout Normal
               turnoutCmdBufEnqueue('N', k);
             } else {                                       // Bit must be a 1, so set turnout Reverse
               turnoutCmdBufEnqueue('R', k);

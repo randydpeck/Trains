@@ -4,7 +4,7 @@
 #include "Display_2004.h"
 
 //Display_2004::Display_2004(HardwareSerial * hdwrSerial, long unsigned int baud) {  // Constructor for methods 1 or 2
-Display_2004::Display_2004(DigoleSerialDisp * DigoleLCD) {  // Constructor for method 3
+Display_2004::Display_2004(DigoleSerialDisp * digoleLCD) {  // Constructor using Method 3
 
   // DigoleSerialDisp is the name of the class in DigoleSerial.h/.cpp.  Note: Neither a parent nor a child class.
   // myLCD is a private pointer of type DigoleSerialDisp that will point to the Digole object.
@@ -14,12 +14,12 @@ Display_2004::Display_2004(DigoleSerialDisp * DigoleLCD) {  // Constructor for m
   // Method 1 uses the "new" keyword to create the object on the heap.  
   // The advantage is that it encapsulates the use of the DigoleSerial class, so the calling .ino doesn't even know about it.
   // Also, it creates a new object each time the constructor is called, so you can have more than one LCD display.
-  // The disadvantage is that use of "new" with Arduino is discouraged, for reasons I don't understand (but may fragment the heap.)
+  // The disadvantage is that use of "new" with Arduino is discouraged, because it may fragment the heap and memory is so small.
   // Constructor definition:
   //   Display_2004::Display_2004(HardwareSerial * hdwrSerial, long unsigned int baud) {
   // Constructor content:
   //   myLCD = new DigoleSerialDisp(hdwrSerial, baud);
-  // hdwrSerial needs to be the address of Serial thru Serial3.
+  // hdwrSerial needs to be the address of Serial thru Serial3, a long unsigned int.
   // baud can be any legit baud rate such as 115200.
 
   // Method 2 uses the more traditional (for Arduino) way to instantiate an object, creating the object on the stack.
@@ -31,21 +31,21 @@ Display_2004::Display_2004(DigoleSerialDisp * DigoleLCD) {  // Constructor for m
   //   static DigoleSerialDisp DigoleLCD(hdwrSerial, baud);
   //   myLCD = &DigoleLCD;
 
-  // Method 3 requires you to instantiate the DigoleSerialDisp object in the calling .ino code, instead of this constructor.
-  // It overcomes the disadvantages of both above methods: It does not use "new", and it allow instantiation of multiple objects.
+  // Method 3 (USED HERE) requires you to instantiate the DigoleSerialDisp object in the calling .ino code, instead of this constructor.
+  // It overcomes the disadvantages of both above methods: It does not use "new", and it allows instantiation of multiple objects.
   // The disadvantage is that you need #define and #include statements about DigoleSerial in the calling .ino program, so the
   // Digole class is no longer encapsulated in the Display_2004 class.
   // The calling .ino program would need to following lines:
   // #define _Digole_Serial_UART_  // To tell compiler compile the serial communication only
   // #include <DigoleSerial.h>     // Tell the compiler to use the DigoleSerial class library
-  // DigoleSerialDisp DigoleLCD(&Serial1, 115200); // Instantiate and name the Digole object
+  // DigoleSerialDisp digoleLCD(&Serial1, (long unsigned int) 115200); // Instantiate and name the Digole object
   // #include <Display_2004.h>                // Class in quotes = in the A_SWT directory; angle brackets = in the library directory.
-  // Display_2004 LCD(&Serial1, (long unsigned int) 115200, &DigoleLCD);  // Instantiate our LCD object called lcd1, pass pointer to DigoleLCD
+  // Display_2004 LCD(&digoleLCD);  // Instantiate our LCD object called LCD, pass pointer to DigoleLCD
   // And the constructor definition would simply require a pointer to the Digole object:
-  //   Display_2004::Display_2004(DigoleSerialDisp * DigoleLCD) {  // Constructor for method 3
+  //   Display_2004::Display_2004(DigoleSerialDisp * digoleLCD) {  // Constructor for method 3
   // And the constructor would need this line:
 
-  myLCD = DigoleLCD;  // Assigns the Digole LCD pointer we were passed to our local private pointer
+  myLCD = digoleLCD;  // METHOD 3: Assigns the Digole LCD pointer we were passed to our local private pointer
 
   return;
 
@@ -53,13 +53,16 @@ Display_2004::Display_2004(DigoleSerialDisp * DigoleLCD) {  // Constructor for m
 
 void Display_2004::init() {
 
+  // 07/13/18: Changed delays from 30/100 to 50/200, which fixed corrupted LCD @ 115200 baud.
+  // 07/10/18: Tried moving (even just some of) this code into constructor, but the display became non-responsive.  I think it's because this
+  // was effectively putting executable code in the .ini file *before* Setup().  So this init() needs to be called in Setup().
   myLCD->begin();                     // Required to initialize LCD
   myLCD->setLCDColRow(LCD_WIDTH, 4);  // Maps starting RAM address on LCD (if other than 1602)
   myLCD->disableCursor();             // We don't need to see a cursor on the LCD
   myLCD->backLightOn();
-  delay(20);                           // About 15ms required to allow LCD to boot before clearing screen
+  delay(50);                           // About 15ms required to allow LCD to boot before clearing screen
   myLCD->clearScreen();               // FYI, won't execute as the *first* LCD command
-  delay(100);                          // At 115200 baud, needs > 90ms after CLS before sending text.  No delay needed at 9600 baud.
+  delay(200);                          // At 115200 baud, needs > 90ms after CLS before sending text.  No delay needed at 9600 baud.
   return;
 
 }

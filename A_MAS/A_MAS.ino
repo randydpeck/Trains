@@ -238,8 +238,8 @@ char lcdString[LCD_WIDTH + 1];           // Global array to hold strings sent to
 // *** MESSAGE CLASS (Inter-Arduino communications):
 #include <Message_MAS.h>
 Message_MAS Message(ptrLCD2004);         // Instantiate message object "Message"; requires a pointer to the 2004 LCD display
-byte MsgIncoming[RS485_MAX_LEN];         // Global array for incoming inter-Arduino messages.  No need to init contents.  Probably shouldn't call them "RS485" though.
-byte MsgOutgoing[RS485_MAX_LEN];         // No need to initialize contents.
+byte msgIncoming[RS485_MAX_LEN];         // Global array for incoming inter-Arduino messages.  No need to init contents.  Probably shouldn't call them "RS485" though.
+byte msgOutgoing[RS485_MAX_LEN];         // No need to initialize contents.
 
 char occPrompt[9] = "        ";       // Stores a/n prompts sent to A-OCC, define here to avoid cross initialization error in switch stmt.
 
@@ -818,24 +818,24 @@ void loop() {
         // Start assembling and sending train-data records to A-OCC, which it will use when registering trains.
         // Fill the RS485 outgoing buffer as appropriate...
         Serial.println("Sending RS485 to A-OCC, and trying to find matching 'last-knonw-train-loc' records...");
-        MsgOutgoing[RS485_LEN_OFFSET] = 16;   // Byte 0 is always the same length for this set of outgoing records
-        MsgOutgoing[RS485_TO_OFFSET] = ARDUINO_OCC;  // Byte 1 is always A-OCC.
-        MsgOutgoing[RS485_FROM_OFFSET] = ARDUINO_MAS;  // Byte 2 is always A-MAS.
-        MsgOutgoing[3] = 'R';   // Byte 3 = Registration record.
-        for (byte i = 0; i < MAX_TRAINS; i++) {   // Using a byte temp variable so one byte in MsgOutgoing[]
-          MsgOutgoing[4] = (i + 1);  // Train number 1..8
-          memcpy(MsgOutgoing + 5, trainReference[i].alphaDesc, 8);  // Drop the 8-byte a/n description field into the RS485 outgoing message field
+        msgOutgoing[RS485_LEN_OFFSET] = 16;   // Byte 0 is always the same length for this set of outgoing records
+        msgOutgoing[RS485_TO_OFFSET] = ARDUINO_OCC;  // Byte 1 is always A-OCC.
+        msgOutgoing[RS485_FROM_OFFSET] = ARDUINO_MAS;  // Byte 2 is always A-MAS.
+        msgOutgoing[3] = 'R';   // Byte 3 = Registration record.
+        for (byte i = 0; i < MAX_TRAINS; i++) {   // Using a byte temp variable so one byte in msgOutgoing[]
+          msgOutgoing[4] = (i + 1);  // Train number 1..8
+          memcpy(msgOutgoing + 5, trainReference[i].alphaDesc, 8);  // Drop the 8-byte a/n description field into the RS485 outgoing message field
           Serial.print("Sending alpha desc: "); Serial.println(trainReference[i].alphaDesc);
           // Insert the train's last-known block (from control record.)  This may not even be a currently-occupied block, but we'll let A-OCC deal with it.
-          MsgOutgoing[13] = lastTrainLoc[i].blockNum;   // This should be the last-known block number, if any.  Else zero.
+          msgOutgoing[13] = lastTrainLoc[i].blockNum;   // This should be the last-known block number, if any.  Else zero.
           Serial.print("Last-known block number: "); Serial.println(lastTrainLoc[i].blockNum);
           if (i < (MAX_TRAINS - 1)) {
-            MsgOutgoing[14] = 'N';   // Not last record being sent
+            msgOutgoing[14] = 'N';   // Not last record being sent
           } else {
-            MsgOutgoing[14] = 'Y';   // Last record (last train)
+            msgOutgoing[14] = 'Y';   // Last record (last train)
           }
-          MsgOutgoing[15] = calcChecksumCRC8(MsgOutgoing, 15); 
-          RS485SendMessage(MsgOutgoing);
+          msgOutgoing[15] = calcChecksumCRC8(msgOutgoing, 15); 
+          RS485SendMessage(msgOutgoing);
           delay(50);  // Just to be sure we don't overflow the A-OCC incoming serial buffer before data can be read
         }
 
@@ -851,7 +851,7 @@ void loop() {
         while (!registrationComplete) {   // Do this loop until A-OCC tells us "all done registering trains" via an RS485 message)
           // Note that when the operator clicks "DONE" that all trains have been registered (or when A-OCC recognizes it because they have indicated a
           // block number for every possible train), A-OCC will send a record with *only* the "last record" field set to Y; i.e. no train data.
-          while (RS485GetMessage(MsgIncoming) == false) {
+          while (RS485GetMessage(msgIncoming) == false) {
             checkIfHaltPinPulledLow();  // If someone has pulled the Halt pin low, just stop
           }   // Just sit here and loop while we wait for the next RS485 incoming reply
           if (RS485fromOCCtoMAS_RegisteredTrain()) {  // If A-OCC is sending train registration information selected by the operator.
@@ -1118,14 +1118,14 @@ void sendRS485ModeBroadcast(byte tmode, byte tstate) {
   }
   LCD2004.send(lcdString);
   Serial.println(lcdString);
-  MsgOutgoing[RS485_LEN_OFFSET] = 7;   // Message byte 0 is length
-  MsgOutgoing[RS485_TO_OFFSET] = ARDUINO_ALL;  // Message byte 1 is "to"
-  MsgOutgoing[RS485_FROM_OFFSET] = ARDUINO_MAS;  // Message byte 2 is "from"
-  MsgOutgoing[3] = 'M';  // Message byte 3 is char 'M' for Mode message
-  MsgOutgoing[4] = tmode;  // Message byte 4 is byte for modeCurrent
-  MsgOutgoing[5] = tstate;  // Message byte 5 is byte for stateCurrent
-  MsgOutgoing[6] = calcChecksumCRC8(MsgOutgoing, 6);   // Message byte 6 is CRC checksum
-  RS485SendMessage(MsgOutgoing);
+  msgOutgoing[RS485_LEN_OFFSET] = 7;   // Message byte 0 is length
+  msgOutgoing[RS485_TO_OFFSET] = ARDUINO_ALL;  // Message byte 1 is "to"
+  msgOutgoing[RS485_FROM_OFFSET] = ARDUINO_MAS;  // Message byte 2 is "from"
+  msgOutgoing[3] = 'M';  // Message byte 3 is char 'M' for Mode message
+  msgOutgoing[4] = tmode;  // Message byte 4 is byte for modeCurrent
+  msgOutgoing[5] = tstate;  // Message byte 5 is byte for stateCurrent
+  msgOutgoing[6] = calcChecksumCRC8(msgOutgoing, 6);   // Message byte 6 is CRC checksum
+  RS485SendMessage(msgOutgoing);
   return;
 }
 
@@ -1144,13 +1144,13 @@ void throwTurnout(byte tnum, char tdir) {
   }
   LCD2004.send(lcdString);
   Serial.println(lcdString);  
-  MsgOutgoing[RS485_LEN_OFFSET] = 6;   // Byte 0.  Length is 6 bytes: Length, To, From, N|R, Turnout_Num, CRC
-  MsgOutgoing[RS485_TO_OFFSET] = ARDUINO_SWT;  // Byte 1.
-  MsgOutgoing[RS485_FROM_OFFSET] = ARDUINO_MAS;  // Byte 2.
-  MsgOutgoing[3] = tdir;
-  MsgOutgoing[4] = tnum;
-  MsgOutgoing[5] = calcChecksumCRC8(MsgOutgoing, 5); 
-  RS485SendMessage(MsgOutgoing);
+  msgOutgoing[RS485_LEN_OFFSET] = 6;   // Byte 0.  Length is 6 bytes: Length, To, From, N|R, Turnout_Num, CRC
+  msgOutgoing[RS485_TO_OFFSET] = ARDUINO_SWT;  // Byte 1.
+  msgOutgoing[RS485_FROM_OFFSET] = ARDUINO_MAS;  // Byte 2.
+  msgOutgoing[3] = tdir;
+  msgOutgoing[4] = tnum;
+  msgOutgoing[5] = calcChecksumCRC8(msgOutgoing, 5); 
+  RS485SendMessage(msgOutgoing);
   return;
 }
 
@@ -1163,13 +1163,13 @@ void throwRoute(char ttype, byte tnum) {    // Pass it char 'T'=Route, '1'=Park 
       Serial.print(lcdString);
       endWithFlashingLED(6);
   }
-  MsgOutgoing[RS485_LEN_OFFSET] = 6;   // Byte 0.  Length is 6 bytes: Length, To, From, T|1|2, Route_Num, CRC
-  MsgOutgoing[RS485_TO_OFFSET] = ARDUINO_SWT;  // Byte 1.
-  MsgOutgoing[RS485_FROM_OFFSET] = ARDUINO_MAS;  // Byte 2.
-  MsgOutgoing[3] = ttype;    // T or 1 or 2
-  MsgOutgoing[4] = tnum;  // This is the route number
-  MsgOutgoing[5] = calcChecksumCRC8(MsgOutgoing, 5); 
-  RS485SendMessage(MsgOutgoing);
+  msgOutgoing[RS485_LEN_OFFSET] = 6;   // Byte 0.  Length is 6 bytes: Length, To, From, T|1|2, Route_Num, CRC
+  msgOutgoing[RS485_TO_OFFSET] = ARDUINO_SWT;  // Byte 1.
+  msgOutgoing[RS485_FROM_OFFSET] = ARDUINO_MAS;  // Byte 2.
+  msgOutgoing[3] = ttype;    // T or 1 or 2
+  msgOutgoing[4] = tnum;  // This is the route number
+  msgOutgoing[5] = calcChecksumCRC8(msgOutgoing, 5); 
+  RS485SendMessage(msgOutgoing);
   return;
 }
 
@@ -1180,26 +1180,26 @@ void throwTurnoutIfRequested() {
   if ((digitalRead(PIN_REQ_TX_A_BTN_IN)) == LOW) {    // A-BTN wants to send us an RS485 message a turnout button has been pressed
     // Send RS485 message to A-BTN asking for turnout button press update.
     // A-BTN only knows of a button press; it doesn't know what state the turnout was in or which turnout LED is lit.
-    MsgOutgoing[RS485_LEN_OFFSET] = 5;   // Byte 0.  Length is 5 bytes: Length, To, From, 'B', CRC
-    MsgOutgoing[RS485_TO_OFFSET] = ARDUINO_BTN;  // Byte 1.
-    MsgOutgoing[RS485_FROM_OFFSET] = ARDUINO_MAS;  // Byte 2.
-    MsgOutgoing[3] = 'B';  // "Send button press info"
-    MsgOutgoing[4] = calcChecksumCRC8(MsgOutgoing, 4); 
-    RS485SendMessage(MsgOutgoing);
+    msgOutgoing[RS485_LEN_OFFSET] = 5;   // Byte 0.  Length is 5 bytes: Length, To, From, 'B', CRC
+    msgOutgoing[RS485_TO_OFFSET] = ARDUINO_BTN;  // Byte 1.
+    msgOutgoing[RS485_FROM_OFFSET] = ARDUINO_MAS;  // Byte 2.
+    msgOutgoing[3] = 'B';  // "Send button press info"
+    msgOutgoing[4] = calcChecksumCRC8(msgOutgoing, 4); 
+    RS485SendMessage(msgOutgoing);
     // Now wait for a reply...
     // There is NO legitimate reason why we would get ANY RS485 message from anyone except A-BTN at this point.
-    MsgIncoming[RS485_TO_OFFSET] = 0;   // Anything other than ARDUINO_BTN
+    msgIncoming[RS485_TO_OFFSET] = 0;   // Anything other than ARDUINO_BTN
     do {
-      RS485GetMessage(MsgIncoming);  // Only returns with data if it has a complete new message
-    } while (MsgIncoming[RS485_TO_OFFSET] != ARDUINO_MAS);
+      RS485GetMessage(msgIncoming);  // Only returns with data if it has a complete new message
+    } while (msgIncoming[RS485_TO_OFFSET] != ARDUINO_MAS);
     // We should NEVER get a message that isn't to A-MAS from A-BTN, but we'll check anyway...
-    if ((MsgIncoming[RS485_TO_OFFSET] !=  ARDUINO_MAS) || (MsgIncoming[RS485_FROM_OFFSET] != ARDUINO_BTN)) {
+    if ((msgIncoming[RS485_TO_OFFSET] !=  ARDUINO_MAS) || (msgIncoming[RS485_FROM_OFFSET] != ARDUINO_BTN)) {
       sprintf(lcdString, "%.20s", "RS485 not from BTN!");
       LCD2004.send(lcdString);
       Serial.println(lcdString);
       endWithFlashingLED(1);
     }
-    byte turnoutToThrow = MsgIncoming[4];   // Button number 1..32
+    byte turnoutToThrow = msgIncoming[4];   // Button number 1..32
     if ((turnoutToThrow < 1) || (turnoutToThrow > TOTAL_TURNOUTS)) {
       sprintf(lcdString, "%.20s", "RS485 bad button no!");
       LCD2004.send(lcdString);
@@ -1271,18 +1271,18 @@ bool sensorChanged(byte * tNum, byte * tStatus) {
   // Real sensor number 1..52 (no such sensor as zero, fyi), status 0=cleared or 1=tripped.
   // If A-SNS detects a sensor change on the layout, it will pull a digital pin low to ask us to query it.
   if ((digitalRead(PIN_REQ_TX_A_SNS_IN)) == LOW) {     // A-SNS wants to send us an RS485 message for occupancy sensor change
-    MsgOutgoing[RS485_LEN_OFFSET] = 5;
-    MsgOutgoing[RS485_TO_OFFSET] = ARDUINO_SNS;
-    MsgOutgoing[RS485_FROM_OFFSET] = ARDUINO_MAS;
-    MsgOutgoing[3] = 'S';  // Sensor request message
-    MsgOutgoing[4] = calcChecksumCRC8(MsgOutgoing, 4);
+    msgOutgoing[RS485_LEN_OFFSET] = 5;
+    msgOutgoing[RS485_TO_OFFSET] = ARDUINO_SNS;
+    msgOutgoing[RS485_FROM_OFFSET] = ARDUINO_MAS;
+    msgOutgoing[3] = 'S';  // Sensor request message
+    msgOutgoing[4] = calcChecksumCRC8(msgOutgoing, 4);
     // Out goes the message!
-    RS485SendMessage(MsgOutgoing);
+    RS485SendMessage(msgOutgoing);
     // Now do nothing but wait for a response from A-SNS...
     bool forUs = false;
     do {
-      if (RS485GetMessage(MsgIncoming)) {
-        if (MsgIncoming[RS485_TO_OFFSET] == ARDUINO_MAS) {
+      if (RS485GetMessage(msgIncoming)) {
+        if (msgIncoming[RS485_TO_OFFSET] == ARDUINO_MAS) {
           forUs = true;
         }
       }
@@ -1290,7 +1290,7 @@ bool sensorChanged(byte * tNum, byte * tStatus) {
     // Now we have an RS485 message sent to A_MAS.  Just for fun, let's confirm that it's from A_SNS, and that we
     // have the appropriate "request" command we are expecting...
     // If not coming from A_SNS or not an 'S'-type (sensor status) message, something is wrong.
-    if ((MsgIncoming[RS485_FROM_OFFSET] != ARDUINO_SNS) || (MsgIncoming[3] != 'S')) {
+    if ((msgIncoming[RS485_FROM_OFFSET] != ARDUINO_SNS) || (msgIncoming[3] != 'S')) {
       sprintf(lcdString, "Unexpected A-SNS msg");
       LCD2004.send(lcdString);
       Serial.print(lcdString);
@@ -1298,8 +1298,8 @@ bool sensorChanged(byte * tNum, byte * tStatus) {
     }
     // Yay.  We have a new sensor status from A-SNS.
     // INTERESTING: We apparently don't use the * dereference operator if we passed an array by reference...
-    * tNum = MsgIncoming[4];     // Sensor number
-    * tStatus = MsgIncoming[5];  // 0 if cleared, 1 if tripped
+    * tNum = msgIncoming[4];     // Sensor number
+    * tStatus = msgIncoming[5];  // 0 if cleared, 1 if tripped
     return true;  // Yes, we got a new sensor status array
   }
   return false;   // No, we did not get a new sensor status array
@@ -1412,22 +1412,22 @@ void RS485fromMAStoSWT_SetLastKnown() {
   sprintf(lcdString, "%.20s", "Last-known turnouts.");
   LCD2004.send(lcdString);
   Serial.println(lcdString);
-  MsgOutgoing[RS485_LEN_OFFSET] = 9;   // Length is 9 bytes: Length, To, From, 'L', 4 bytes data, CRC
-  MsgOutgoing[RS485_TO_OFFSET] = ARDUINO_SWT;  // Byte 1.
-  MsgOutgoing[RS485_FROM_OFFSET] = ARDUINO_MAS;  // Byte 2.
-  MsgOutgoing[3] = 'L';   // Command to A-SWT = 'L' = Last-known turnout position
+  msgOutgoing[RS485_LEN_OFFSET] = 9;   // Length is 9 bytes: Length, To, From, 'L', 4 bytes data, CRC
+  msgOutgoing[RS485_TO_OFFSET] = ARDUINO_SWT;  // Byte 1.
+  msgOutgoing[RS485_FROM_OFFSET] = ARDUINO_MAS;  // Byte 2.
+  msgOutgoing[3] = 'L';   // Command to A-SWT = 'L' = Last-known turnout position
   for (byte i = 0; i < 4; i++) {   // i represents each of the four bytes of turnout data
-    MsgOutgoing[i + 4] = lastKnownTurnout[i];
+    msgOutgoing[i + 4] = lastKnownTurnout[i];
   }
-  MsgOutgoing[8] = calcChecksumCRC8(MsgOutgoing, 8); // Add CRC8 checksum
-  RS485SendMessage(MsgOutgoing);
+  msgOutgoing[8] = calcChecksumCRC8(msgOutgoing, 8); // Add CRC8 checksum
+  RS485SendMessage(msgOutgoing);
   return;
 }
 
 bool RS485fromOCCtoMAS_Reply() {
-  if (MsgIncoming[RS485_TO_OFFSET] == ARDUINO_MAS) {        // Okay so far...
-    if (MsgIncoming[RS485_FROM_OFFSET] == ARDUINO_OCC) {    // Okay so far...
-      if (MsgIncoming[3] == 'Q') {  // Q means it's Reply to a question prompt so we are golden!
+  if (msgIncoming[RS485_TO_OFFSET] == ARDUINO_MAS) {        // Okay so far...
+    if (msgIncoming[RS485_FROM_OFFSET] == ARDUINO_OCC) {    // Okay so far...
+      if (msgIncoming[3] == 'Q') {  // Q means it's Reply to a question prompt so we are golden!
         return true;
       }
     }
@@ -1436,9 +1436,9 @@ bool RS485fromOCCtoMAS_Reply() {
 }
 
 bool RS485fromOCCtoMAS_RegisteredTrain() {
-  if (MsgIncoming[RS485_TO_OFFSET] == ARDUINO_MAS) {        // Okay so far...
-    if (MsgIncoming[RS485_FROM_OFFSET] == ARDUINO_OCC) {    // Okay so far...
-      if (MsgIncoming[3] == 'T') {  // T means it's Train data (what we expect) so we are golden!
+  if (msgIncoming[RS485_TO_OFFSET] == ARDUINO_MAS) {        // Okay so far...
+    if (msgIncoming[RS485_FROM_OFFSET] == ARDUINO_OCC) {    // Okay so far...
+      if (msgIncoming[3] == 'T') {  // T means it's Train data (what we expect) so we are golden!
         return true;
       }
     }
@@ -1448,30 +1448,30 @@ bool RS485fromOCCtoMAS_RegisteredTrain() {
 
 bool RS485AskOCCtoPromptForSmoke() {
   Serial.println("Sending RS485 to A-OCC to prompt for smoke y/n...");
-  MsgOutgoing[RS485_LEN_OFFSET] = 14;   // Byte 0 is length of message
-  MsgOutgoing[RS485_TO_OFFSET] = ARDUINO_OCC;  // Byte 1 is always A-OCC.
-  MsgOutgoing[RS485_FROM_OFFSET] = ARDUINO_MAS;  // Byte 2 is always A-MAS.
-  MsgOutgoing[3] = 'Q';   // Byte 3 = Q for Query
+  msgOutgoing[RS485_LEN_OFFSET] = 14;   // Byte 0 is length of message
+  msgOutgoing[RS485_TO_OFFSET] = ARDUINO_OCC;  // Byte 1 is always A-OCC.
+  msgOutgoing[RS485_FROM_OFFSET] = ARDUINO_MAS;  // Byte 2 is always A-MAS.
+  msgOutgoing[3] = 'Q';   // Byte 3 = Q for Query
   sprintf(occPrompt,"SMOKE  N");  // First of two Smoke prompts
-  memcpy(MsgOutgoing + 4, occPrompt, 8);
-  MsgOutgoing[12] = 'N';   // Last record?
-  MsgOutgoing[13] = calcChecksumCRC8(MsgOutgoing, 13); 
-  RS485SendMessage(MsgOutgoing);  
+  memcpy(msgOutgoing + 4, occPrompt, 8);
+  msgOutgoing[12] = 'N';   // Last record?
+  msgOutgoing[13] = calcChecksumCRC8(msgOutgoing, 13); 
+  RS485SendMessage(msgOutgoing);  
   delay(50);   // Brief delay so we don't overflow A-OCC incoming serial buffer
   sprintf(occPrompt,"SMOKE  Y");  // Second of two Smoke prompts
-  memcpy(MsgOutgoing + 4, occPrompt, 8);
-  MsgOutgoing[12] = 'Y';   // Last record?
-  MsgOutgoing[13] = calcChecksumCRC8(MsgOutgoing, 13); 
-  RS485SendMessage(MsgOutgoing);  
+  memcpy(msgOutgoing + 4, occPrompt, 8);
+  msgOutgoing[12] = 'Y';   // Last record?
+  msgOutgoing[13] = calcChecksumCRC8(msgOutgoing, 13); 
+  RS485SendMessage(msgOutgoing);  
   // Now wait until A-OCC sends us a reply of 0 or 1 (No or Yes per the above two smoke prompts)
-  while (RS485GetMessage(MsgIncoming) == false) {  }   // Wait for the expected RS485 incoming reply
+  while (RS485GetMessage(msgIncoming) == false) {  }   // Wait for the expected RS485 incoming reply
   if (!RS485fromOCCtoMAS_Reply()) {  // If *not* A-OCC is replying to a question sent by A-MAS such as Smoke Y/N, etc.
     sprintf(lcdString, "%.20s", "Smoke fatal error!");
     LCD2004.send(lcdString);
     Serial.println(lcdString);
     endWithFlashingLED(3);
   }
-  if (MsgIncoming[4] == 0) {
+  if (msgIncoming[4] == 0) {
     return false;  // false means no smoke, true means yes smoke
   } else {
     return true;
@@ -1479,103 +1479,103 @@ bool RS485AskOCCtoPromptForSmoke() {
 }
 
 void RS485TellLEGifUseSmoke(const bool i) {          // Now tell A-LEG if we want smoke or not...
-  MsgOutgoing[RS485_LEN_OFFSET] = 6;   // Byte 0 is length of message
-  MsgOutgoing[RS485_TO_OFFSET] = ARDUINO_LEG;  // Byte 1 is "to"
-  MsgOutgoing[RS485_FROM_OFFSET] = ARDUINO_MAS;  // Byte 2 is "from"
-  MsgOutgoing[3] = 'S';   // Byte 3 = S for Smoke
+  msgOutgoing[RS485_LEN_OFFSET] = 6;   // Byte 0 is length of message
+  msgOutgoing[RS485_TO_OFFSET] = ARDUINO_LEG;  // Byte 1 is "to"
+  msgOutgoing[RS485_FROM_OFFSET] = ARDUINO_MAS;  // Byte 2 is "from"
+  msgOutgoing[3] = 'S';   // Byte 3 = S for Smoke
   if (i == false) {   // false means No smoke, true means Yes smoke
-    MsgOutgoing[4] = 'N';
+    msgOutgoing[4] = 'N';
     smokeOn = false;
     Serial.println("Smoke OFF");
   } else {        // Must be 1 means Yes smoke
-    MsgOutgoing[4] = 'Y';
+    msgOutgoing[4] = 'Y';
     smokeOn = true;
     Serial.println("Smoke ON");
   }
-  MsgOutgoing[5] = calcChecksumCRC8(MsgOutgoing, 5); 
-  RS485SendMessage(MsgOutgoing);  
+  msgOutgoing[5] = calcChecksumCRC8(msgOutgoing, 5); 
+  RS485SendMessage(msgOutgoing);  
   return;
 }
 
 bool RS485AskOCCtoPromptStartupSpeed() {
   Serial.println("Sending RS485 to A-OCC to prompt for fast or slow startup...");
-  MsgOutgoing[RS485_LEN_OFFSET] = 14;   // Byte 0 is length of message
-  MsgOutgoing[RS485_TO_OFFSET] = ARDUINO_OCC;  // Byte 1 is always A-OCC.
-  MsgOutgoing[RS485_FROM_OFFSET] = ARDUINO_MAS;  // Byte 2 is always A-MAS.
-  MsgOutgoing[3] = 'Q';   // Byte 3 = Q for Query
+  msgOutgoing[RS485_LEN_OFFSET] = 14;   // Byte 0 is length of message
+  msgOutgoing[RS485_TO_OFFSET] = ARDUINO_OCC;  // Byte 1 is always A-OCC.
+  msgOutgoing[RS485_FROM_OFFSET] = ARDUINO_MAS;  // Byte 2 is always A-MAS.
+  msgOutgoing[3] = 'Q';   // Byte 3 = Q for Query
   sprintf(occPrompt,"FAST ON ");  // First of two startup prompts
-  memcpy(MsgOutgoing + 4, occPrompt, 8);
-  MsgOutgoing[12] = 'N';   // Last record?
-  MsgOutgoing[13] = calcChecksumCRC8(MsgOutgoing, 13); 
-  RS485SendMessage(MsgOutgoing);  
+  memcpy(msgOutgoing + 4, occPrompt, 8);
+  msgOutgoing[12] = 'N';   // Last record?
+  msgOutgoing[13] = calcChecksumCRC8(msgOutgoing, 13); 
+  RS485SendMessage(msgOutgoing);  
   delay(50);   // Brief delay so we don't fill A-OCC incoming serial buffer too quickly
   sprintf(occPrompt,"SLOW ON ");  // Second of two startup prompts
-  memcpy(MsgOutgoing + 4, occPrompt, 8);
-  MsgOutgoing[12] = 'Y';   // Last record?
-  MsgOutgoing[13] = calcChecksumCRC8(MsgOutgoing, 13); 
-  RS485SendMessage(MsgOutgoing);  
+  memcpy(msgOutgoing + 4, occPrompt, 8);
+  msgOutgoing[12] = 'Y';   // Last record?
+  msgOutgoing[13] = calcChecksumCRC8(msgOutgoing, 13); 
+  RS485SendMessage(msgOutgoing);  
   // Now wait until A-OCC sends us a reply of 0 or 1 (Fast or SLow per the above two startup prompts)
-  while (RS485GetMessage(MsgIncoming) == false) {  }   // Wait for the expected RS485 incoming reply
+  while (RS485GetMessage(msgIncoming) == false) {  }   // Wait for the expected RS485 incoming reply
   if (!RS485fromOCCtoMAS_Reply()) {  // If *not* A-OCC is replying to a question sent by A-MAS such as Smoke Y/N, etc.
     sprintf(lcdString, "%.20s", "Startup fatal error!");
     LCD2004.send(lcdString);
     Serial.println(lcdString);
     endWithFlashingLED(3);
   }
-  if (MsgIncoming[4] == 0) {
+  if (msgIncoming[4] == 0) {
     return false;  // false means fast startup, true means slow startup
   } else {
     return true;
   }
 
-  return MsgIncoming[4];  // 0 means fast startup, 1 means slow startup
+  return msgIncoming[4];  // 0 means fast startup, 1 means slow startup
 }
 
 void RS485TellLEGStartupSpeed(const bool i) {          // Now tell A-LEG if we want fast or slow startup of locos...
-  MsgOutgoing[RS485_LEN_OFFSET] = 6;   // Byte 0 is length of message
-  MsgOutgoing[RS485_TO_OFFSET] = ARDUINO_LEG;  // Byte 1 is "to"
-  MsgOutgoing[RS485_FROM_OFFSET] = ARDUINO_MAS;  // Byte 2 is "from"
-  MsgOutgoing[3] = 'F';   // Byte 3 = F for Fast or Slow startup
+  msgOutgoing[RS485_LEN_OFFSET] = 6;   // Byte 0 is length of message
+  msgOutgoing[RS485_TO_OFFSET] = ARDUINO_LEG;  // Byte 1 is "to"
+  msgOutgoing[RS485_FROM_OFFSET] = ARDUINO_MAS;  // Byte 2 is "from"
+  msgOutgoing[3] = 'F';   // Byte 3 = F for Fast or Slow startup
   if (i == false) {   // false means fast startup, true means slow startup
-    MsgOutgoing[4] = 'F';
+    msgOutgoing[4] = 'F';
     slowStartup = false;
     Serial.println("Fast startup.");
   } else {        // Must be 1 means slow startup
-    MsgOutgoing[4] = 'S';
+    msgOutgoing[4] = 'S';
     slowStartup = true;
     Serial.println("Slow startup.");
   }
-  MsgOutgoing[5] = calcChecksumCRC8(MsgOutgoing, 5); 
-  RS485SendMessage(MsgOutgoing);
+  msgOutgoing[5] = calcChecksumCRC8(msgOutgoing, 5); 
+  RS485SendMessage(msgOutgoing);
   return;
 }
 
 bool RS485AskOCCtoPromptAnnouncements() {
   Serial.println("Sending RS485 to A-OCC to prompt for audio PA system or not...");
-  MsgOutgoing[RS485_LEN_OFFSET] = 14;   // Byte 0 is length of message
-  MsgOutgoing[RS485_TO_OFFSET] = ARDUINO_OCC;  // Byte 1 is always A-OCC.
-  MsgOutgoing[RS485_FROM_OFFSET] = ARDUINO_MAS;  // Byte 2 is always A-MAS.
-  MsgOutgoing[3] = 'Q';   // Byte 3 = Q for Query
+  msgOutgoing[RS485_LEN_OFFSET] = 14;   // Byte 0 is length of message
+  msgOutgoing[RS485_TO_OFFSET] = ARDUINO_OCC;  // Byte 1 is always A-OCC.
+  msgOutgoing[RS485_FROM_OFFSET] = ARDUINO_MAS;  // Byte 2 is always A-MAS.
+  msgOutgoing[3] = 'Q';   // Byte 3 = Q for Query
   sprintf(occPrompt,"AUDIO N ");  // First of two prompts.  AUDIO must be upper-case so the A-OCC code recognizes it (if it even needs to?)
-  memcpy(MsgOutgoing + 4, occPrompt, 8);
-  MsgOutgoing[12] = 'N';   // Last record?
-  MsgOutgoing[13] = calcChecksumCRC8(MsgOutgoing, 13); 
-  RS485SendMessage(MsgOutgoing);  
+  memcpy(msgOutgoing + 4, occPrompt, 8);
+  msgOutgoing[12] = 'N';   // Last record?
+  msgOutgoing[13] = calcChecksumCRC8(msgOutgoing, 13); 
+  RS485SendMessage(msgOutgoing);  
   delay(50);   // Brief delay so we don't fill A-OCC incoming serial buffer too quickly
   sprintf(occPrompt,"AUDIO Y ");  // Second of two prompts
-  memcpy(MsgOutgoing + 4, occPrompt, 8);
-  MsgOutgoing[12] = 'Y';   // Last record?
-  MsgOutgoing[13] = calcChecksumCRC8(MsgOutgoing, 13); 
-  RS485SendMessage(MsgOutgoing);  
+  memcpy(msgOutgoing + 4, occPrompt, 8);
+  msgOutgoing[12] = 'Y';   // Last record?
+  msgOutgoing[13] = calcChecksumCRC8(msgOutgoing, 13); 
+  RS485SendMessage(msgOutgoing);  
   // Now wait until A-OCC sends us a reply of 0 or 1 (Use the PA Audio announcement system, or not.)
-  while (RS485GetMessage(MsgIncoming) == false) {  }   // Wait for the expected RS485 incoming reply
+  while (RS485GetMessage(msgIncoming) == false) {  }   // Wait for the expected RS485 incoming reply
   if (!RS485fromOCCtoMAS_Reply()) {  // If *not* A-OCC is replying to a question sent by A-MAS such as Smoke Y/N, etc.
     sprintf(lcdString, "%.20s", "Startup fatal error!");
     LCD2004.send(lcdString);
     Serial.println(lcdString);
     endWithFlashingLED(3);
   }
-  if (MsgIncoming[4] == 0) {   // 0 means no audio PA, 1 means use audio PA
+  if (msgIncoming[4] == 0) {   // 0 means no audio PA, 1 means use audio PA
     return false;
     Serial.println("Not using PA system.");
   } else {        // Must be 1 means use audio PA
@@ -1586,11 +1586,11 @@ bool RS485AskOCCtoPromptAnnouncements() {
 
 // 9/30/17: THIS FUNCTION SHOULD PROBABLY PASS NOTHING AND RETURN A 5-BYTE STRUCT (Train, Block, Dir, Entry, Exit)
 void RS485fromOCCtoMAS_ExtractData(byte * t, byte * b, char * d, byte * n, byte * x) {
-  // Returns train number, block number, direction, entry sensor, and exit sensor, using data in MsgIncoming.
+  // Returns train number, block number, direction, entry sensor, and exit sensor, using data in msgIncoming.
   // Could be re-written to pass nothing and return a 5-byte struct...???
-  * t = MsgIncoming[4];  // Train number: 1..8 -- we must assume that any other block is static (train 99)
-  * b = MsgIncoming[5];  // Block number 1..32 that the train is in
-  * d = MsgIncoming[6];  // Direction E or W that the train is facing
+  * t = msgIncoming[4];  // Train number: 1..8 -- we must assume that any other block is static (train 99)
+  * b = msgIncoming[5];  // Block number 1..32 that the train is in
+  * d = msgIncoming[6];  // Direction E or W that the train is facing
   // RS485 data does not include entry and exit sensors; we must look those up:
   getEntryAndExitSensorFromBlockAndDir(* b, * d, n, x);  // Same as (* b, * d, & * n, & * x)
   return;
@@ -1615,7 +1615,7 @@ void getEntryAndExitSensorFromBlockAndDir(const byte b, const char d, byte * n, 
 }
 
 bool RS485fromOCCtoMAS_TrainRecord() {    // N means that this is a train data record; otherwise it's an "all done" record with no train data.
-  return (MsgIncoming[7] == 'N');
+  return (msgIncoming[7] == 'N');
 }
 
 

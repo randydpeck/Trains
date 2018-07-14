@@ -1,5 +1,5 @@
 #include <Train_Consts_Global.h>
-char APPVERSION[LCD_WIDTH + 1] = "A-BTN Rev. 07/07/18";
+char APPVERSION[LCD_WIDTH + 1] = "A-BTN Rev. 07/11/18";
 const byte THIS_MODULE = ARDUINO_BTN;  // Not sure if/where I will use this - intended if I call a common function but will this "global" be seen there?
 
 // A_BTN watches for control panel pushbutton presses by operator, and transmits that info to A_MAS.
@@ -60,29 +60,23 @@ byte modeCurrent  = MODE_UNDEFINED;
 byte stateCurrent = STATE_STOPPED;
                               
 // *** SERIAL LCD DISPLAY CLASS:
-#define _Digole_Serial_UART_                  // To tell compiler compile the serial communication only
+// We will create an object called "LCD" that displays messages on the 2004 display (i.e. LCD.send)  Although this object requires that we have
+// previously created a "digoleLCD" object from the DigoleSerial class library, "LCD" is not a child class/object of digoleLCD.  When we instantiate
+// our LCD object, we'll pass it a pointer to the digoleLCD object, and then we can forget about the Digole class/object altogether.
+#define _Digole_Serial_UART_                  // Tell compiler to use only the serial part of the DigoleSerial class library
 #include <DigoleSerial.h>                     // Tell the compiler to use the DigoleSerial class library
 // DigoleSerialDisp needs serial port address i.e. &Serial, &Serial1, &Serial2, or &Serial3.
 // DigoleSerialDisp also needs a valid baud rate, typically 9600 or 115200.
-DigoleSerialDisp digoleLCD(&Serial1, 115200); // Instantiate and name the Digole 2004 LCD object, parent of Display_2004 class
-#include <Display_2004.h>                     // Our LCD message-display library
-Display_2004 LCD(&digoleLCD);                 // Instantiate our LCD object "LCD" by passing a pointer to the Digole LCD object.
+DigoleSerialDisp digoleLCD(&Serial1, SERIAL1_SPEED);  // Instantiate and name the DigoleSerial object, required for the Display_2004 class.
+#include <Display_2004.h>                     // Our LCD message-display library; requires DigoleSerialDisp object "digoleLCD"
+Display_2004 LCD(&digoleLCD);                 // Finally, instantiate our LCD object "LCD" by passing a pointer to the Digole LCD object.
 char lcdString[LCD_WIDTH + 1];                // Global array to hold strings sent to Digole 2004 LCD; last char is for null terminator.
 
-// Instantiate a Display_2004 object called "LCD".
-// Pass address of serial port to use (0..3) such as &Serial1, and baud rate such as 9600 or 115200.
-//Display_2004 LCD(&Serial1, 9600);     // Instantiate 2004 LCD display "LCD."
-//Display_2004 * ptrLCD;                  // Pointer will be passed to any other classes that need to be able to write to the LCD display.
-
-
 // *** RS485 & Digital Pin MESSAGE CLASS (Inter-Arduino communications):
-//#include <Message_BTN.h>
 #include <Message_BTN.h>                      // This module's communitcation class, in its .ini directory
-//Message_BTN Message(&Serial2, ptrLCD);  // Instantiate message object "Message"; requires a pointer to the hardware serial port, and the 2004 LCD display
-Message_BTN Message(&Serial2, 115200, &LCD);  // Instantiate our RS485/digital communications object "Message"
-byte MsgIncoming[RS485_MAX_LEN];              // Global array for incoming inter-Arduino messages.  No need to init contents.
-byte MsgOutgoing[RS485_MAX_LEN];              // No need to initialize contents.
-
+Message_BTN Message(&Serial2, SERIAL2_SPEED, &LCD);  // Instantiate our RS485/digital communications object "Message"
+byte msgIncoming[RS485_MAX_LEN];              // Global array for incoming inter-Arduino messages.  No need to init contents.
+byte msgOutgoing[RS485_MAX_LEN];              // No need to initialize contents.
 
 // *** SHIFT REGISTER: The following lines are required by the Centipede input/output shift registers.
 #include <Wire.h>                 // Needed for Centipede shift register
@@ -90,7 +84,6 @@ byte MsgOutgoing[RS485_MAX_LEN];              // No need to initialize contents.
 Centipede shiftRegister;          // create Centipede shift register object
 
 // *** MISC CONSTANTS AND GLOBALS: needed by A-BTN:
-//const byte TOTAL_TURNOUTS            =  32;  // How many input bits on Centipede shift register to check.  30 connected, but 32 relays.
 unsigned long lastReleaseTimeMS      =   0;  // To prevent operator from pressing turnout buttons too quickly
 const unsigned long RELEASE_DELAY_MS = 200;  // Force operator to wait this many milliseconds between presses
 
@@ -100,22 +93,17 @@ const unsigned long RELEASE_DELAY_MS = 200;  // Force operator to wait this many
 
 void setup() {
 
-  LCD.init();                       // Initialize the 20 x 04 Digole serial LCD display
-  // delay(1000); (Delay not needed in setup - it's included in LCD init)
-  Serial.begin(115200);                 // PC serial monitor window
+  LCD.init();                           // Initialize the 20 x 04 Digole serial LCD display object "LCD."  Needs to be done here, not in LCD constructor.
+  Serial.begin(SERIAL0_SPEED);          // PC serial monitor window
   // Serial1 is for the Digole 20x4 LCD debug display, already set up
-  Serial2.begin(115200);                // RS485  up to 115200 ********** THIS SHOULD BE MOVED INTO Message_RS485.h/.cpp and commented out here
+  // Serial2 is for our RS485 message bus, already set up
   Wire.begin();                         // Start I2C for Centipede shift register
   shiftRegister.initialize();           // Set all registers to default
   initializeShiftRegisterPins();        // Set all Centipede shift register pins to INPUT for monitoring button presses
   initializePinIO();                    // Initialize all of the I/O pins and turn all LEDs on control panel off
-  
   sprintf(lcdString, APPVERSION);       // Display the application version number on the LCD display
   Serial.println(lcdString);
   LCD.send(lcdString);
-
-
-  //Message.Hello();
 
 }
 
@@ -127,44 +115,49 @@ void loop() {
 
   checkIfHaltPinPulledLow();  // If someone has pulled the Halt pin low, release relays and just stop
 
-  // Look for RS485 message, and if found, see if it's a mode-update message.  Otherwise ignore.
+  // See if there is an incoming message.  If so, handle accordingly; otherwise watch for a button press.
   // Note that the ONLY message A-BTN cares about is a "mode broadcast" from A-MAS, and also of course
   // we need a "send button change" request message, but only after we ask A-MAS to ask us.
-  // Also take this opportunity to clear out any other incoming RS485 messages that we don't care about...
 
-  // We will just sit in a loop watching RS485 incoming messages until/unless the mode is MODE_MANUAL, STATE_RUNNING
-  // We can only escape the following do..while loop if mode is Manual and state is Running.
+  if (Message.receive(msgIncoming) == true) {
+    // We received a new message that is relevant to this module.
+    // This has the side effect to clear out any other incoming RS485 messages that we don't care about.
+    // At this point, it could only be a mode - change message, else fatal error.
+    if (Message.getType(msgIncoming) == 'M') {  // It's a Mode update from A-MAS!
+      modeCurrent = Message.getMode(msgIncoming);
+      stateCurrent = Message.getState(msgIncoming);
+    } else {  // Our message was not a mode update, so that is a fatal error (should never happen)
+      sprintf(lcdString, "Wrong msg type!");
+      LCD.send(lcdString);
+      Serial.print(lcdString);
+      endWithFlashingLED(6);
+    }
+  }
 
-  do {
+  // Check to see if a turnout button has been pressed, and handle accordingly.
+  // But only do so if we are in mode MANUAL and state RUNNING.  Otherwise, do nothing until mode/state changes.
 
-    getModeAndState(&modeCurrent, &stateCurrent);  // Updates the two parameters if anything has changed since last check
-    checkIfHaltPinPulledLow();  // If someone has pulled the Halt pin low, release relays and just stop
+  if ((modeCurrent == MODE_MANUAL) && (stateCurrent == STATE_RUNNING)) {
 
-  } while ((modeCurrent != MODE_MANUAL) || (stateCurrent != STATE_RUNNING));
+    // If we get here, then we know we are in MODE_MANUAL, STATE_RUNNING.  This is the only case where we look for button presses.
+    // And, don't even bother checking for button press unless we have waited at least RELEASE_DELAY_MS since the last button release.
+    if ((millis() - lastReleaseTimeMS) > RELEASE_DELAY_MS) {
 
-  // If we get here, then we know we are in MODE_MANUAL mode, STATE_RUNNING state.  This is the only case where we look for button presses.
-  // And, don't even bother checking for button press unless we have waited at least RELEASE_DELAY_MS since the last button release.
+      // Okay, it's been at least RELEASE_DELAY_MS since operator released a turnout control button, so check for another press...
+      // Find the FIRST control panel pushbutton that is being pressed.  Only handles one at a time.
+      byte buttonPressed = turnoutButtonPressed();   // Returns 0 if no button pressed; otherwise button number that was pressed.
+      if (buttonPressed > 0) {   // Operator pressed a pushbutton!
 
-  if ((millis() - lastReleaseTimeMS) > RELEASE_DELAY_MS) {
+        Message.sendTurnoutButtonPress(buttonPressed);  // Don't even need to send it the message buffer!
 
-    // Okay, it's been at least RELEASE_DELAY_MS since operator released a turnout control button, so check for another press...
-    // Find the FIRST control panel pushbutton that is being pressed.  Only handles one at a time.
+        // The operator *just* pressed the button, so wait for bounce and final release before moving on...
+        turnoutButtonDebounce(buttonPressed);
 
-    byte buttonPressed = turnoutButtonPressed();   // Returns 0 if no button pressed; otherwise button number that was pressed.
+        lastReleaseTimeMS = millis();   // Keep track of the last time a button was released
 
-    if (buttonPressed > 0) {   // Operator pressed a pushbutton!
-
-      // Send an RS485 message to A-MAS indicating which turnout pushbutton was pressed.  1..32 (not 0..31)
-      sendRS485ButtonPressUpdate(buttonPressed);
-
-      // The operator *just* pressed the button, so wait for bounce and final release before moving on...
-      turnoutButtonDebounce(buttonPressed);
-
-      lastReleaseTimeMS = millis();   // Keep track of the last time a button was released
-
-    }  // end of "if button pressed" code block
-
-  }   // end of "if we've waited long enough since button was released...
+      }  // end of "if button pressed" code block
+    }    // end of "if we've waited long enough since button was released...
+  }      // end of "if we are in manual mode, running state...
 
 }  // end of main loop()
 
@@ -198,25 +191,9 @@ void initializePinIO() {
 
 void initializeShiftRegisterPins() {
   // Rev: 10/26/16.  Set all Centipede shift register pins to input for monitoring button presses
-
   for (int i = 0; i < 8; i++) {         // For each of 4 chips per board / 2 boards = 8 chips @ 16 bits/chip
     shiftRegister.portMode(i, 0b1111111111111111);   // 0 = OUTPUT, 1 = INPUT.  Sets all pins on chip to INPUT
     shiftRegister.portPullup(i, 0b1111111111111111); // 0 = NO PULLUP, 1 = PULLUP.  Sets all pins on chip to PULLUP
-  }
-  return;
-}
-
-void getModeAndState(byte * cm, byte * cs) {
-  // Changes the value of modeCurrent and/or stateCurrent if A-MAS sends us a mode-change message; otherwise leave as-is.
-  if (Message.Receive(MsgIncoming)) {  // If returns true, then we got a complete RS485 message (may or may not be for us)
-    if ((Message.GetTo(MsgIncoming)) == ARDUINO_ALL) {
-      if ((Message.GetFrom(MsgIncoming)) == ARDUINO_MAS) {
-        if (Message.GetType(MsgIncoming) == 'M') {  // It's a Mode update from A-MAS!
-          *cm = MsgIncoming[4];
-          *cs = MsgIncoming[5];
-        }
-      }
-    }
   }
   return;
 }
@@ -251,48 +228,6 @@ void turnoutButtonDebounce(const byte tButtonPressed) {
   while (shiftRegister.digitalRead(tButtonPressed - 1) == LOW) { }    // LOW == 0x0; HIGH == 0x1
   // We also need some debounce after the operator releases the button
   delay(20);
-  return;
-}
-
-void sendRS485ButtonPressUpdate(const byte tButtonPressed) {
-  // Send an RS485 message to A-MAS indicating which turnout toggle button the operator just pressed.
-  // Rev 09/13/17.
-
-  // First pull PIN_REQ_TX_A_BTN_OUT digital line low, to tell A-MAS that we want to send it a "turnout button pressed" message...
-  digitalWrite(PIN_REQ_TX_A_BTN_OUT, LOW);
-
-  // Wait for an RS485 message from A-MAS requesting button status.  Remember that it's possible that we may
-  // receive some RS485 messages that are irrelevant first, so ignore all RS485 messages until we see one to A-BTN.
-  // If there is no new message, then MsgIncoming will remain unchanged - whatever it was before.  Since the previous
-  // message might have been to us, we'd better overwrite that attribute so we won't think it's a new message.
-  // Also check if the Halt line has been pulled low, in case something crashed and message will never arrive.
-  Message.SetTo(MsgIncoming, ARDUINO_NUL);   // Anything other than ARDUINO_BTN
-  do {
-    checkIfHaltPinPulledLow();     // If someone has pulled the Halt pin low, just stop
-    Message.Receive(MsgIncoming);  // Will only populate MsgIncoming with new data if a new message came in since last call
-  } while ((Message.GetTo(MsgIncoming)) != ARDUINO_BTN);
-
-  // Now we have an RS485 message sent to A_BTN.  Just for fun, let's confirm that it's from A_MAS, and that we
-  // have the appropriate "request" message we are expecting...
-  // If not coming from A_MAS or not an 'B'-type (button press) request, something is wrong.
-  if ((Message.GetFrom(MsgIncoming) != ARDUINO_MAS) || (Message.GetType(MsgIncoming) != 'B')) {
-    sprintf(lcdString, "Unexpected message!");
-    LCD.send(lcdString);
-    Serial.print(lcdString);
-    endWithFlashingLED(6);
-  }
-
-  // Release the REQ_TX_A_BTN "I have a message for you, A-MAS" digital line back to HIGH state...
-  digitalWrite(PIN_REQ_TX_A_BTN_OUT, HIGH);
-
-  // Format and send the new status: Length, To, From, 'B', button number (byte).  CRC is automatic in class.
-  Message.SetLen(MsgOutgoing, 6);
-  Message.SetTo (MsgOutgoing, ARDUINO_MAS);
-  Message.SetFrom(MsgOutgoing, ARDUINO_BTN);
-  Message.SetType(MsgOutgoing, 'B');
-  Message.SetButtonNum(MsgOutgoing, tButtonPressed);  // Button number 1..32 (not 0..31)
-  Message.Send(MsgOutgoing);
-
   return;
 }
 

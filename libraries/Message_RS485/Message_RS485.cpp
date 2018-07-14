@@ -1,19 +1,13 @@
-// Rev: 07/07/18
+// Rev: 07/14/18
 // Message_RS485 handles RS485 (and *not* digital-pin) communications, via a specified serial port.
 
 #include <Message_RS485.h>
 
 Message_RS485::Message_RS485(HardwareSerial * hdwrSerial, long unsigned int baud, Display_2004 * LCD2004) {  // Constructor
-  mySerial = hdwrSerial;  // Pointer to the serial port we want to use for RS485
-  myBaud = baud;          // Serial port baud rate
-  myLCD = LCD2004;        // Pointer to the LCD display for error messages
-}
-
-void Message_RS485::InitPort() {
-  // Initialize the serial port that this object will be using...
-
-  mySerial->begin(myBaud);
-
+  mySerial = hdwrSerial;    // Pointer to the serial port we want to use for RS485.
+  myBaud = baud;            // Serial port baud rate.
+  myLCD = LCD2004;          // Pointer to the LCD display for error messages.
+  mySerial->begin(myBaud);  // Initialize the serial port that this object will be using.
 }
 
 bool Message_RS485::RS485GetMessage(byte tMsg[]) {
@@ -31,6 +25,11 @@ bool Message_RS485::RS485GetMessage(byte tMsg[]) {
   
   byte tMsgLen = mySerial->peek();     // First byte will be message length
   byte tBufLen = mySerial->available();  // How many bytes are waiting?  Size is 64.
+
+  sprintf(lcdString, "Msg len %3i.", tMsgLen);
+  myLCD->send(lcdString);
+  sprintf(lcdString, "Buf len %3i.", tBufLen);
+  myLCD->send(lcdString);
 
   if (tBufLen >= tMsgLen) {  // We have at least enough bytes for a complete incoming message
     digitalWrite(PIN_RS485_RX_LED, HIGH);       // Turn on the receive LED
@@ -59,6 +58,8 @@ bool Message_RS485::RS485GetMessage(byte tMsg[]) {
       Serial.println(lcdString);
       endWithFlashingLED(1);
     }
+// DEBUG: Keep the receive LED lit for 500ms after read is completed ************************************************************************************************************
+delay(500);
     // At this point, we have a complete and legit message with good CRC, which may or may not be for us.
     digitalWrite(PIN_RS485_RX_LED, LOW);       // Turn off the receive LED
     return true;
@@ -72,13 +73,29 @@ void Message_RS485::RS485SendMessage(byte tMsg[]) {
   // This version, as part of the RS485 message class, automatically calculates and adds the CRC checksum.
   digitalWrite(PIN_RS485_TX_LED, HIGH);       // Turn on the transmit LED
   digitalWrite(PIN_RS485_TX_ENABLE, RS485_TRANSMIT);  // Turn on transmit mode
-  byte tMsgLen = GetLen(tMsg);
+  byte tMsgLen = getLen(tMsg);
   tMsg[tMsgLen - 1] = calcChecksumCRC8(tMsg, tMsgLen - 1);  // Insert the checksum into the message
+sprintf(lcdString, "%.20s", "Before write.");
+myLCD->send(lcdString);
+
+sprintf(lcdString, "Writing %2i bytes.", tMsgLen);
+myLCD->send(lcdString);
+
   mySerial->write(tMsg, tMsgLen);  // flush() makes it impossible to overflow the outgoing serial buffer, which CAN happen in my test code.
                                    // Although it is BLOCKING code, we'll use it at least for now.  Output buffer overflow is unpredictable without it.
                                    // Alternative would be to check available space in the outgoing serial buffer and stop on overflow, but how?
+  sprintf(lcdString, "%.20s", "Before flush.");
+  myLCD->send(lcdString);
+
   mySerial->flush();               // wait for transmission of outgoing serial data to complete.  Takes about 0.1ms/byte.
+
+  sprintf(lcdString, "%.20s", "After flush.");
+  myLCD->send(lcdString);
+
   digitalWrite(PIN_RS485_TX_ENABLE, RS485_RECEIVE);  // receive mode
+// DEBUG: Keep the transmit LED lit for 500ms after write is completed*************************************************************************************************************
+
+delay(500);
   digitalWrite(PIN_RS485_TX_LED, LOW);       // Turn off the transmit LED
   return;
 }
@@ -104,38 +121,38 @@ byte Message_RS485::calcChecksumCRC8(const byte data[], byte len) {
   return crc;
 }
 
-byte Message_RS485::GetLen(byte tMsg[]) {
+byte Message_RS485::getLen(byte tMsg[]) {
   return tMsg[RS485_LEN_OFFSET];
 }
 
-byte Message_RS485::GetTo(byte tMsg[]) {
+byte Message_RS485::getTo(byte tMsg[]) {
   return tMsg[RS485_TO_OFFSET];
 }
 
-byte Message_RS485::GetFrom(byte tMsg[]) {
+byte Message_RS485::getFrom(byte tMsg[]) {
   return tMsg[RS485_FROM_OFFSET];
 }
 
-char Message_RS485::GetType(byte tMsg[]) {
+char Message_RS485::getType(byte tMsg[]) {
   return tMsg[RS485_TYPE_OFFSET];
 }
 
-void Message_RS485::SetLen(byte tMsg[], byte len) {
+void Message_RS485::setLen(byte tMsg[], byte len) {
   tMsg[RS485_LEN_OFFSET] = len;
   return;
 }
 
-void Message_RS485::SetTo(byte tMsg[], byte to) {
+void Message_RS485::setTo(byte tMsg[], byte to) {
   tMsg[RS485_TO_OFFSET] = to;
   return;
 }
 
-void Message_RS485::SetFrom(byte tMsg[], byte from) {
+void Message_RS485::setFrom(byte tMsg[], byte from) {
   tMsg[RS485_FROM_OFFSET] = from;
   return;
 }
 
-void Message_RS485::SetType(byte tMsg[], char type) {
+void Message_RS485::setType(byte tMsg[], char type) {
   tMsg[RS485_TYPE_OFFSET] = type;
   return;
 }

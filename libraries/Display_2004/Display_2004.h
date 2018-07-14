@@ -18,7 +18,7 @@ class Display_2004
 {
   public:
 
-    Display_2004(DigoleSerialDisp * myDisp);
+    Display_2004(DigoleSerialDisp * digoleLCD);
     // Constructor.
 
     void init();

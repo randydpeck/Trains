@@ -1,4 +1,4 @@
-// Rev: 05/05/18
+// Rev: 07/14/18
 // Train_Consts_Global declares and defines all constants that are global to all (or nearly all) Arduino modules.
 
 // Header (.h) files should contain:
@@ -29,6 +29,11 @@ const byte LCD_WIDTH = 20;                // 2004 (20 char by 4 lines) LCD displ
 
 const byte TOTAL_TURNOUTS    =  32;       // 30 connected, but 32 relays.
 
+// Serial port speed
+const long unsigned int SERIAL0_SPEED = 115200;  // Serial port 0 is used for serial monitor
+const long unsigned int SERIAL1_SPEED = 115200;  // Serial port 1 is Digole 2004 LCD display
+const long unsigned int SERIAL2_SPEED =   9600;  // Serial port 2 is the RS485 communications bus
+
 // Note that the serial input buffer is only 64 bytes, which means that we need to keep emptying it since there
 // will be many commands between Arduinos, even though most may not be for THIS Arduino.  If the buffer overflows,
 // then we will be totally screwed up (but it will be apparent in the checksum.)
@@ -41,8 +46,23 @@ const byte RS485_TYPE_OFFSET =  3;        // fourth byte of message is the type 
 const byte RS485_TRANSMIT    = HIGH;      // HIGH = 0x1.  How to set TX_CONTROL pin when we want to transmit RS485
 const byte RS485_RECEIVE     = LOW;       // LOW = 0x0.  How to set TX_CONTROL pin when we want to receive (or NOT transmit) RS485
 
-const byte RS485_BTN_BUTTON_NO_OFFSET = 4;      // Offset into "real" RS485 message where button no. that was pressed is stored (A_MAS and A_BTN)
-
+// These RS485 message offsets are specific to individual modules (though all are used by A-MAS).
+// The 3-char name refers to TO, FROM, and MESSAGE TYPE.
+const byte RS485_ALL_MAS_MODE_OFFSET = 4;     // Offset into RS485 message "Mode update" where the new mode is stored.
+const byte RS485_ALL_MAS_STATE_OFFSET = 5;    // Offset into RS485 message "Mode update" where the new state is stored.
+const byte RS485_MAS_BTN_BUTTON_NUM_OFFSET = 4;  // Offset into "real" RS485 message where button no. that was pressed is stored (A_MAS and A_BTN)
+/*
+const byte RS485_
+const byte RS485_
+const byte RS485_
+const byte RS485_
+const byte RS485_
+const byte RS485_
+const byte RS485_
+const byte RS485_
+const byte RS485_
+const byte RS485_
+*/
 // *** ARDUINO DEVICE CONSTANTS: Here are all the different Arduinos and their "addresses" (ID numbers) for communication.
 const byte ARDUINO_NUL =  0;              // Use this to initialize etc.
 const byte ARDUINO_MAS =  1;              // Master Arduino (Main controller)
