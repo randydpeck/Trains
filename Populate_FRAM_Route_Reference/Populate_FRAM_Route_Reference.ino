@@ -69,7 +69,7 @@ const byte PIN_FRAM2           = 12;  // FRAM2 used by A-LEG for Event Reference
 //    Hackscribble_Ferro FRAM1(MB85RS64, PIN_FRAM1);
 // Control buffer in each FRAM is first 128 bytes (address 0..127) reserved for any special purpose we want such as config info.
 #include <SPI.h>
-#include <Hackscribble_Ferro.h>
+#include "Hackscribble_Ferro.h"
 const unsigned int FRAM_CONTROL_BUF_SIZE = 128;  // This defaults to 64 bytes in the library, but we modified it
 // FRAM1 stores the Route Reference, Park 1 Reference, and Park 2 Reference tables.
 // FRAM1 control block (first 128 bytes):

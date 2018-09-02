@@ -1,4 +1,4 @@
-// Rev: 07/14/18
+// Rev: 07/31/18
 // Train_Consts_Global declares and defines all constants that are global to all (or nearly all) Arduino modules.
 
 // Header (.h) files should contain:
@@ -23,7 +23,8 @@
 // extern       byte RS485MsgOutgoing[];
 // extern       char lcdString[];         // Global array to hold strings sent to Digole 2004 LCD; last char is for null terminator.
 
-extern const byte THIS_MODULE;            // Will be set to A_MAS, A_SWT, etc. for each module
+//extern const byte THIS_MODULE;            // Will be set to A_MAS, A_SWT, etc. for each module
+//byte THIS_MODULE;            // Will be set to A_MAS, A_SWT, etc. for each module
 
 const byte LCD_WIDTH = 20;                // 2004 (20 char by 4 lines) LCD display
 
@@ -32,7 +33,7 @@ const byte TOTAL_TURNOUTS    =  32;       // 30 connected, but 32 relays.
 // Serial port speed
 const long unsigned int SERIAL0_SPEED = 115200;  // Serial port 0 is used for serial monitor
 const long unsigned int SERIAL1_SPEED = 115200;  // Serial port 1 is Digole 2004 LCD display
-const long unsigned int SERIAL2_SPEED =   9600;  // Serial port 2 is the RS485 communications bus
+const long unsigned int SERIAL2_SPEED = 115200;  // Serial port 2 is the RS485 communications bus
 
 // Note that the serial input buffer is only 64 bytes, which means that we need to keep emptying it since there
 // will be many commands between Arduinos, even though most may not be for THIS Arduino.  If the buffer overflows,
@@ -48,21 +49,33 @@ const byte RS485_RECEIVE     = LOW;       // LOW = 0x0.  How to set TX_CONTROL p
 
 // These RS485 message offsets are specific to individual modules (though all are used by A-MAS).
 // The 3-char name refers to TO, FROM, and MESSAGE TYPE.
-const byte RS485_ALL_MAS_MODE_OFFSET = 4;     // Offset into RS485 message "Mode update" where the new mode is stored.
-const byte RS485_ALL_MAS_STATE_OFFSET = 5;    // Offset into RS485 message "Mode update" where the new state is stored.
-const byte RS485_MAS_BTN_BUTTON_NUM_OFFSET = 4;  // Offset into "real" RS485 message where button no. that was pressed is stored (A_MAS and A_BTN)
-/*
-const byte RS485_
-const byte RS485_
-const byte RS485_
-const byte RS485_
-const byte RS485_
-const byte RS485_
-const byte RS485_
-const byte RS485_
-const byte RS485_
-const byte RS485_
-*/
+const byte RS485_ALL_MAS_MODE_OFFSET                 =  4;  // Message to ALL from MAS advising what the new mode is.
+const byte RS485_ALL_MAS_STATE_OFFSET                =  5;  // Message to ALL from MAS advising what the new state is.
+const byte RS485_BTN_MAS_BUTTON_NUM_OFFSET           =  0;  // Unused - this is the message to BTN from MAS simply requesting button number that was pressed.  No data.
+const byte RS485_LEG_MAS_FAST_SLOW_OFFSET            =  4;  // Message to LEG from MAS advising Fast vs Slow startup for given loco.
+const byte RS485_LEG_MAS_SMOKE_ON_OFF_OFFSET         =  4;  // Message to LEG from MAS advising Y for smoke, or N for no smoke
+const byte RS485_LEG_MAS_ROUTE_NUM_OFFSET            =  4;  // Message to LEG from MAS ordering this new/added route for train (below).
+const byte RS485_LEG_MAS_ROUTE_TRAIN_OFFSET          =  5;  // Message to LEG from MAS advising which train to assign to above route.
+const byte RS485_OCC_MAS_QUESTION_PROMPT_OFFSET      =  4;  // Message to OCC from MAS with 8-byte prompt for A/N display.  There will be at least 2 for operator to select from.
+const byte RS485_OCC_MAS_QUESTION_LAST_OFFSET        = 12;  // Message to OCC from MAS is this the last 8-byte prompt Y or N.
+const byte RS485_OCC_MAS_REGISTER_TRAIN_NUM_OFFSET   =  4;  // Message to OCC from MAS giving train number to be used as registration prompt, with name (below).
+const byte RS485_OCC_MAS_REGISTER_TRAIN_NAME_OFFSET  =  5;  // Message to OCC from MAS giving name of train numbered above.
+const byte RS485_OCC_MAS_REGISTER_TRAIN_BLOCK_OFFSET = 13;  // Message to OCC from MAS giving default block number to use for above train.
+const byte RS485_OCC_MAS_REGISTER_TRAIN_LAST_OFFSET  = 14;  // Message to OCC from MAS is this the last train to be used as registration options?  Y or N.
+const byte RS485_OCC_MAS_PLAY_DATA_OFFSET            =  4;  // Message to OCC from MAS requesting to play 8-byte sequence on PA starting at this offset.
+const byte RS485_SNS_MAS_SENSOR_NUM_OFFSET           =  0;  // Unused - this is the message to SNS from MAS simply requesting sensor number that was tripped or cleared.  No data.
+const byte RS485_SWT_MAS_SET_LAST_KNOWN_OFFSET       =  4;  // Message to SWT from MAS saying "set turnouts according to the bits in the 4 bytes starting here.  A.k.a. last-known.
+const byte RS485_SWT_MAS_SET_ROUTE_NUM_OFFSET        =  4;  // Message to SWT from MAS saying "set this route number."  Could be Route, Park 1, or Park 2, depending on message type.
+const byte RS485_SWT_MAS_SET_TURNOUT_NUM_OFFSET      =  4;  // Message to SWT from MAS saying "set this turnout."
+const byte RS485_MAS_SNS_SENSOR_NUM_OFFSET           =  4;  // Message to MAS from SNS indicating which sensor was tripped or cleared (per following field.)
+const byte RS485_MAS_SNS_SENSOR_TRIP_CLEAR_OFFSET    =  5;  // Message to MAS from SNS indicating if the above sensor was cleared (0) or tripped (1).
+const byte RS485_MAS_BTN_BUTTON_NUM_OFFSET           =  4;  // Message to MAS from BTN indicating which turnout button number was pressed.
+const byte RS485_MAS_OCC_REGISTER_TRAIN_NUM_OFFSET   =  4;  // Message to MAS from OCC with registered train number, details below.
+const byte RS485_MAS_OCC_REGISTER_BLOCK_NUM_OFFSET   =  5;  // Message to MAS from OCC with above registered train's occupied block number.
+const byte RS485_MAS_OCC_REGISTER_DIR_OFFSET         =  6;  // Message to MAS from OCC with above registered train's direction in the block, E or W.
+const byte RS485_MAS_OCC_REGISTER_LAST_OFFSET        =  7;  // Message to MAS from OCC is this the last registration record I have to send you?  Y or N.
+const byte RS485_MAS_OCC_QUESTION_REPLY_NUM_OFFSET   =  4;  // Message to MAS from OCC providing which question the operator selected as their choice, 0..n
+
 // *** ARDUINO DEVICE CONSTANTS: Here are all the different Arduinos and their "addresses" (ID numbers) for communication.
 const byte ARDUINO_NUL =  0;              // Use this to initialize etc.
 const byte ARDUINO_MAS =  1;              // Master Arduino (Main controller)
@@ -75,9 +88,29 @@ const byte ARDUINO_OCC =  7;              // Output controls the Red/Green and W
 const byte ARDUINO_ALL = 99;              // Master broadcasting to all i.e. mode change
 
 // *** ARDUINO PIN NUMBERS:
+const byte PIN_RS485_RX_LED        = 06;  // Output: set HIGH to turn on YELLOW when RS485 is RECEIVING data
+const byte PIN_RS485_TX_ENABLE     = 04;  // Output: set HIGH when in RS485 transmit mode, LOW when not transmitting
+const byte PIN_RS485_TX_LED        = 05;  // Output: set HIGH to turn on BLUE LED when RS485 is TRANSMITTING data
+const byte PIN_SPEAKER             = 07;  // Output: Piezo buzzer connects positive here
+const byte PIN_WAV_TRIGGER         = 10;  // Input: LOW when a track is playing, else HIGH.
+
+const byte PIN_MEGA_RX0            = 00;  // Serial 0 receive PC Serial monitor
+const byte PIN_MEGA_TX0            = 01;  // Serial 0 transmit PC Serial monitor
+const byte PIN_MEGA_RX1            = 19;  // Serial 1 receive NOT NEEDED FOR 2004 LCD (currently used for FRAM3)
+const byte PIN_MEGA_TX1            = 18;  // Serial 1 transmit 2004 LCD
+const byte PIN_MEGA_RX2            = 17;  // Serial 2 receive RS485 network
+const byte PIN_MEGA_TX2            = 16;  // Serial 2 transmit RS485 network
+const byte PIN_MEGA_RX3            = 15;  // Serial 3 receive A_LEG Legacy, A_OCC WAV Trigger
+const byte PIN_MEGA_TX3            = 14;  // Serial 3 transmit A_LEG Legacy, A_OCC WAV Trigger
+const byte PIN_MEGA_SDA            = 20;  // I2C
+const byte PIN_MEGA_SCL            = 21;  // I2C
+const byte PIN_MEGA_ =
+const byte PIN_MEGA_ =
+const byte PIN_MEGA_ =
+const byte PIN_MEGA_ =
 const byte PIN_FRAM1               = 11;  // Output: FRAM1 chip select.  Route Reference table and last-known-state of all trains.
 const byte PIN_FRAM2               = 12;  // Output: FRAM2 chip select.  Event Reference and Delayed Action tables.
-const byte PIN_FRAM3               = 19;  // Output: FRAM3 chip select.
+const byte PIN_FRAM3               = 19;  // Output: FRAM3 chip select.  **************************************************** WAIT, PIN 19 IS SERIAL 1 IN...??????????????????
 const byte PIN_HALT                =  9;  // Output: Pull low to tell A-LEG to issue Legacy Emergency Stop FE FF FF
 const byte PIN_LED                 = 13;  // Built-in LED always pin 13
 const byte PIN_PANEL_4_OFF         = 37;  // Input: Control panel #4 PowerMaster toggled down.  Pulled LOW.
@@ -111,11 +144,6 @@ const byte PIN_ROTARY_PUSH         = 19;  // Input: Rotary Encoder "Select" (pus
 const byte PIN_ROTARY_REGISTER     = 25;  // Input: Rotary mode "Register."  Pulled LOW.
 const byte PIN_ROTARY_START        = 33;  // Input: Rotary "Start" button.  Pulled LOW
 const byte PIN_ROTARY_STOP         = 35;  // Input: Rotary "Stop" button.  Pulled LOW
-const byte PIN_RS485_RX_LED        =  6;  // Output: set HIGH to turn on YELLOW when RS485 is RECEIVING data
-const byte PIN_RS485_TX_ENABLE     =  4;  // Output: set HIGH when in RS485 transmit mode, LOW when not transmitting
-const byte PIN_RS485_TX_LED        =  5;  // Output: set HIGH to turn on BLUE LED when RS485 is TRANSMITTING data
-const byte PIN_SPEAKER             =  7;  // Output: Piezo buzzer connects positive here
-const byte PIN_WAV_TRIGGER         = 10;  // Input: LOW when a track is playing, else HIGH.
 
 // *** OPERATING MODES AND STATES:
 const byte MODE_UNDEFINED  = 0;

@@ -1,11 +1,12 @@
-#include <Command_RS485.h>
-char APPVERSION[21] = "A-MAS Rev. 04/20/18";
-#include <Train_Consts_Global.h>
+#include "Command_RS485.h"
+char APPVERSION[21] = "A-MAS Rev. 07/19/18";
+#include "Train_Consts_Global.h"
 const byte THIS_MODULE = ARDUINO_MAS;  // Not sure if/where I will use this - intended if I call a common function but will this "global" be seen there?
 
 // Include the following #define if we want to run the system with just the lower-level track.  Comment out to create records for both levels of track.
 #define SINGLE_LEVEL     // Comment this out for full double-level routes.  Use it for single-level route testing.
 
+// 07/19/18: Added F() macros to all Serial.print commands with literal text strings, saving 1 byte/char of RAM.
 // 04/22/18: Updating new global const, message and LCD display classes.
 // 04/18/18: Changed line in RS485SendMessage back to original, as the bug was fixed by the vendor.
 // 03/22/18: Changed line in RS485SendMessage to: "Serial2.write((unsigned char*) tMsg, tMsg[0]);" to fix red squiggly in Serial2.write(), per Tim M.
@@ -228,7 +229,7 @@ byte modeCurrent  = MODE_UNDEFINED;
 byte stateCurrent = STATE_STOPPED;
 
 // *** SERIAL LCD DISPLAY CLASS:
-#include <Display_2004.h>                // Class in quotes = in the A_SWT directory; angle brackets = in the library directory.
+#include "Display_2004.h"
 // Instantiate a Display_2004 object called "LCD2004".
 // Pass address of serial port to use (0..3) such as &Serial1, and baud rate such as 9600 or 115200.
 Display_2004 LCD2004(&Serial1, 115200);  // Instantiate 2004 LCD display "LCD2004."
@@ -236,7 +237,7 @@ Display_2004 * ptrLCD2004;               // Pointer will be passed to any other 
 char lcdString[LCD_WIDTH + 1];           // Global array to hold strings sent to Digole 2004 LCD; last char is for null terminator.
 
 // *** MESSAGE CLASS (Inter-Arduino communications):
-#include <Message_MAS.h>
+#include "Message_MAS.h"
 Message_MAS Message(ptrLCD2004);         // Instantiate message object "Message"; requires a pointer to the 2004 LCD display
 byte msgIncoming[RS485_MAX_LEN];         // Global array for incoming inter-Arduino messages.  No need to init contents.  Probably shouldn't call them "RS485" though.
 byte msgOutgoing[RS485_MAX_LEN];         // No need to initialize contents.
@@ -252,8 +253,8 @@ char occPrompt[9] = "        ";       // Stores a/n prompts sent to A-OCC, defin
 // To create an instance of FRAM, we specify a name, the FRAM part number, and our SS pin number, i.e.:
 //    Hackscribble_Ferro FRAM1(MB85RS64, PIN_FRAM1);
 // Control buffer in each FRAM is first 128 bytes (address 0..127) reserved for any special purpose we want such as config info.
-#include <SPI.h>                                    // FRAM uses SPI communications
-#include <Hackscribble_Ferro.h>                     // FRAM library
+#include "SPI.h"                                    // FRAM uses SPI communications
+#include "Hackscribble_Ferro.h"                     // FRAM library
 const unsigned int FRAM_CONTROL_BUF_SIZE = 128;     // This defaults to 64 bytes in the library, but we modified it
 // FRAM1 stores the Route Reference, Park 1 Reference, and Park 2 Reference tables.
 // FRAM1 control block (first 128 bytes):
@@ -804,12 +805,12 @@ void loop() {
         }
 
         // TEST CODE: PRINT THE BLOCK RESERVATION TABLE SHOWING ALL OCCUPIED BLOCKS AS STATIC RESERVED...
-        Serial.println("BEGINNING BLOCK RESERVATION TABLE, WITH ALL OCCUPIED BLOCKS RESERVED AS #99 STATIC:");
-        Serial.println("Block, Reserved-For-Train, Direction:");
+        Serial.println(F("BEGINNING BLOCK RESERVATION TABLE, WITH ALL OCCUPIED BLOCKS RESERVED AS #99 STATIC:"));
+        Serial.println(F("Block, Reserved-For-Train, Direction:"));
         for (byte i=0; i < TOTAL_BLOCKS; i++) {  // Block number is a zero offset, so record 0 = block 1
-          Serial.print(i + 1); Serial.print("      ");
+          Serial.print(i + 1); Serial.print(F("      "));
           Serial.print(blockReservation[i].reservedForTrain);  // Should be 0 or TRAIN_STATIC at this point
-          Serial.print(i + 1); Serial.print("      ");
+          Serial.print(i + 1); Serial.print(F("      "));
           Serial.println(blockReservation[i].whichDirection);         // Should be E or W
         }
         
@@ -817,7 +818,7 @@ void loop() {
         // Now, every occupied block is reserved for train 99 (static) and all vacant blocks show train 0.
         // Start assembling and sending train-data records to A-OCC, which it will use when registering trains.
         // Fill the RS485 outgoing buffer as appropriate...
-        Serial.println("Sending RS485 to A-OCC, and trying to find matching 'last-knonw-train-loc' records...");
+        Serial.println(F("Sending RS485 to A-OCC, and trying to find matching 'last-knonw-train-loc' records..."));
         msgOutgoing[RS485_LEN_OFFSET] = 16;   // Byte 0 is always the same length for this set of outgoing records
         msgOutgoing[RS485_TO_OFFSET] = ARDUINO_OCC;  // Byte 1 is always A-OCC.
         msgOutgoing[RS485_FROM_OFFSET] = ARDUINO_MAS;  // Byte 2 is always A-MAS.
@@ -825,10 +826,10 @@ void loop() {
         for (byte i = 0; i < MAX_TRAINS; i++) {   // Using a byte temp variable so one byte in msgOutgoing[]
           msgOutgoing[4] = (i + 1);  // Train number 1..8
           memcpy(msgOutgoing + 5, trainReference[i].alphaDesc, 8);  // Drop the 8-byte a/n description field into the RS485 outgoing message field
-          Serial.print("Sending alpha desc: "); Serial.println(trainReference[i].alphaDesc);
+          Serial.print(F("Sending alpha desc: ")); Serial.println(trainReference[i].alphaDesc);
           // Insert the train's last-known block (from control record.)  This may not even be a currently-occupied block, but we'll let A-OCC deal with it.
           msgOutgoing[13] = lastTrainLoc[i].blockNum;   // This should be the last-known block number, if any.  Else zero.
-          Serial.print("Last-known block number: "); Serial.println(lastTrainLoc[i].blockNum);
+          Serial.print(F("Last-known block number: ")); Serial.println(lastTrainLoc[i].blockNum);
           if (i < (MAX_TRAINS - 1)) {
             msgOutgoing[14] = 'N';   // Not last record being sent
           } else {
@@ -873,12 +874,12 @@ void loop() {
               // Now, create an entry in the newly-initialized Train Progress table for this newly-registered train...
               trainProgressEnqueue(tTrain, tBlock, tEntSns, tExtSns);
               // TEST CODE: DISPLAY RESULTS OF WHAT WE HAVE SO FAR...AS EACH TRAIN IS REGISTERED...
-              Serial.println("NEW TRAIN REGISTERED!");
-              Serial.print("Train number: "); Serial.println(tTrain);
-              Serial.print("Block number: "); Serial.println(tBlock);
-              Serial.print("Direction   : "); Serial.println(tDir);
-              Serial.print("Entry sensor: "); Serial.println(tEntSns);
-              Serial.print("Exit sensor : "); Serial.println(tExtSns);
+              Serial.println(F("NEW TRAIN REGISTERED!"));
+              Serial.print(F("Train number: ")); Serial.println(tTrain);
+              Serial.print(F("Block number: ")); Serial.println(tBlock);
+              Serial.print(F("Direction   : ")); Serial.println(tDir);
+              Serial.print(F("Entry sensor: ")); Serial.println(tEntSns);
+              Serial.print(F("Exit sensor : ")); Serial.println(tExtSns);
               // 9/20/17: A-LEG will have seen the above commands come in, and will just now have registered and be starting up each train.
               // A-LEG will see that there is no route, and we are not in Auto mode, so it won't try to get the train moving yet.
               // But A-LEG will create a new Train Progress record for this train, initialized to just this single block.
@@ -889,7 +890,7 @@ void loop() {
               // see incoming traffic on the RS485 data bus.
             } else {   // Rather than being a train data record, we received an "all done" record from A-OCC
               registrationComplete = true;
-              Serial.println("Registration complete.");
+              Serial.println(F("Registration complete."));
             }
           }
         }  // End of "while registration is not complete" code block
@@ -1018,7 +1019,7 @@ void blockReservationUpdate(const byte t, const byte b, const char d) {
   // This is used for both reserving a block (given train number > 0) or for releasing a reserved block (setting train number to zero.)
   blockReservation[b - 1].reservedForTrain = t;
   blockReservation[b - 1].whichDirection = d;
-  Serial.print("Setting block reservation for block: "); Serial.print(b); Serial.print(" train "); Serial.print(t); Serial.print(" direction "); Serial.println(d);
+  Serial.print(F("Setting block reservation for block: ")); Serial.print(b); Serial.print(F(" train ")); Serial.print(t); Serial.print(F(" direction ")); Serial.println(d);
   return;
 }
 
@@ -1199,7 +1200,7 @@ void throwTurnoutIfRequested() {
       Serial.println(lcdString);
       endWithFlashingLED(1);
     }
-    byte turnoutToThrow = msgIncoming[4];   // Button number 1..32
+    byte turnoutToThrow = msgIncoming[4];   // Button number 1..32 (will never be 0.)
     if ((turnoutToThrow < 1) || (turnoutToThrow > TOTAL_TURNOUTS)) {
       sprintf(lcdString, "%.20s", "RS485 bad button no!");
       LCD2004.send(lcdString);
@@ -1447,7 +1448,7 @@ bool RS485fromOCCtoMAS_RegisteredTrain() {
 }
 
 bool RS485AskOCCtoPromptForSmoke() {
-  Serial.println("Sending RS485 to A-OCC to prompt for smoke y/n...");
+  Serial.println(F("Sending RS485 to A-OCC to prompt for smoke y/n..."));
   msgOutgoing[RS485_LEN_OFFSET] = 14;   // Byte 0 is length of message
   msgOutgoing[RS485_TO_OFFSET] = ARDUINO_OCC;  // Byte 1 is always A-OCC.
   msgOutgoing[RS485_FROM_OFFSET] = ARDUINO_MAS;  // Byte 2 is always A-MAS.
@@ -1486,11 +1487,11 @@ void RS485TellLEGifUseSmoke(const bool i) {          // Now tell A-LEG if we wan
   if (i == false) {   // false means No smoke, true means Yes smoke
     msgOutgoing[4] = 'N';
     smokeOn = false;
-    Serial.println("Smoke OFF");
+    Serial.println(F("Smoke OFF"));
   } else {        // Must be 1 means Yes smoke
     msgOutgoing[4] = 'Y';
     smokeOn = true;
-    Serial.println("Smoke ON");
+    Serial.println(F("Smoke ON"));
   }
   msgOutgoing[5] = calcChecksumCRC8(msgOutgoing, 5); 
   RS485SendMessage(msgOutgoing);  
@@ -1498,7 +1499,7 @@ void RS485TellLEGifUseSmoke(const bool i) {          // Now tell A-LEG if we wan
 }
 
 bool RS485AskOCCtoPromptStartupSpeed() {
-  Serial.println("Sending RS485 to A-OCC to prompt for fast or slow startup...");
+  Serial.println(F("Sending RS485 to A-OCC to prompt for fast or slow startup..."));
   msgOutgoing[RS485_LEN_OFFSET] = 14;   // Byte 0 is length of message
   msgOutgoing[RS485_TO_OFFSET] = ARDUINO_OCC;  // Byte 1 is always A-OCC.
   msgOutgoing[RS485_FROM_OFFSET] = ARDUINO_MAS;  // Byte 2 is always A-MAS.
@@ -1539,11 +1540,11 @@ void RS485TellLEGStartupSpeed(const bool i) {          // Now tell A-LEG if we w
   if (i == false) {   // false means fast startup, true means slow startup
     msgOutgoing[4] = 'F';
     slowStartup = false;
-    Serial.println("Fast startup.");
+    Serial.println(F("Fast startup."));
   } else {        // Must be 1 means slow startup
     msgOutgoing[4] = 'S';
     slowStartup = true;
-    Serial.println("Slow startup.");
+    Serial.println(F("Slow startup."));
   }
   msgOutgoing[5] = calcChecksumCRC8(msgOutgoing, 5); 
   RS485SendMessage(msgOutgoing);
@@ -1551,7 +1552,7 @@ void RS485TellLEGStartupSpeed(const bool i) {          // Now tell A-LEG if we w
 }
 
 bool RS485AskOCCtoPromptAnnouncements() {
-  Serial.println("Sending RS485 to A-OCC to prompt for audio PA system or not...");
+  Serial.println(F("Sending RS485 to A-OCC to prompt for audio PA system or not..."));
   msgOutgoing[RS485_LEN_OFFSET] = 14;   // Byte 0 is length of message
   msgOutgoing[RS485_TO_OFFSET] = ARDUINO_OCC;  // Byte 1 is always A-OCC.
   msgOutgoing[RS485_FROM_OFFSET] = ARDUINO_MAS;  // Byte 2 is always A-MAS.
@@ -1577,10 +1578,10 @@ bool RS485AskOCCtoPromptAnnouncements() {
   }
   if (msgIncoming[4] == 0) {   // 0 means no audio PA, 1 means use audio PA
     return false;
-    Serial.println("Not using PA system.");
+    Serial.println(F("Not using PA system."));
   } else {        // Must be 1 means use audio PA
     return true;
-    Serial.println("PA system will be used.");
+    Serial.println(F("PA system will be used."));
   }
 }
 
@@ -1645,7 +1646,7 @@ bool trainProgressIsEmpty(const byte tTrainNum) {
   if ((tTrainNum > 0) && (tTrainNum <= MAX_TRAINS)) {  // Looking at actual train numbers 1..MAX_TRAINS
     return (trainProgress[tTrainNum - 1].count == 0);
   } else {
-    Serial.println("FATAL ERROR!  Train number out of range in trainProgressIsEmpty."); // *********************** CHANGE TO STANDARD ALL-STOP FATAL ERROR IN REGULAR CODE
+    Serial.println(F("FATAL ERROR!  Train number out of range in trainProgressIsEmpty.")); // *********************** CHANGE TO STANDARD ALL-STOP FATAL ERROR IN REGULAR CODE
     while (true) {}
   }
 }
@@ -1656,7 +1657,7 @@ bool trainProgressIsFull(const byte tTrainNum) {
   if ((tTrainNum > 0) && (tTrainNum <= MAX_TRAINS)) {  // Looking at actual train numbers 1..MAX_TRAINS
     return (trainProgress[tTrainNum - 1].count == MAX_BLOCKS_PER_TRAIN);
   } else {
-    Serial.println("FATAL ERROR!  Train number out of range in trainProgressIsFull."); // *********************** CHANGE TO STANDARD ALL-STOP FATAL ERROR IN REGULAR CODE
+    Serial.println(F("FATAL ERROR!  Train number out of range in trainProgressIsFull.")); // *********************** CHANGE TO STANDARD ALL-STOP FATAL ERROR IN REGULAR CODE
     while (true) {}
   }
 }
@@ -1770,27 +1771,27 @@ void trainProgressDisplay(const byte tTrainNum) {
   // This is just used for debugging and can be removed from final code.
   // Iterates from tail, and prints out count number of elements, wraps around if necessary.
   if (!trainProgressIsEmpty(tTrainNum)) {   // In this case, actual train number tTrainNum, not tTrainNum - 1
-    Serial.print("Train number: "); Serial.println(tTrainNum);
-    Serial.print("Is Empty? "); Serial.println(trainProgressIsEmpty(tTrainNum));
-    Serial.print("Is Full?  "); Serial.println(trainProgressIsFull(tTrainNum));
-    Serial.print("Count:    "); Serial.println(trainProgress[tTrainNum - 1].count);
-    Serial.print("Head:     "); Serial.println(trainProgress[tTrainNum - 1].head);
-    Serial.print("Tail:     "); Serial.println(trainProgress[tTrainNum - 1].tail);
-    Serial.print("Data:     "); 
+    Serial.print(F("Train number: ")); Serial.println(tTrainNum);
+    Serial.print(F("Is Empty? ")); Serial.println(trainProgressIsEmpty(tTrainNum));
+    Serial.print(F("Is Full?  ")); Serial.println(trainProgressIsFull(tTrainNum));
+    Serial.print(F("Count:    ")); Serial.println(trainProgress[tTrainNum - 1].count);
+    Serial.print(F("Head:     ")); Serial.println(trainProgress[tTrainNum - 1].head);
+    Serial.print(F("Tail:     ")); Serial.println(trainProgress[tTrainNum - 1].tail);
+    Serial.print(F("Data:     "));
     // Start at tail and increment using modulo addition, traversing/searching each active block
     // tElement starts pointing at tail and will be incremented (modulo size) until it points at head
     byte tElement = trainProgress[tTrainNum - 1].tail;
     // i is the number of iterations; the number of elements in this train's (non-empty) table 1..MAX_BLOCKS_PER_TRAIN
     for (byte i = 0; i < trainProgress[tTrainNum - 1].count; i++) {   
-      Serial.print(trainProgress[tTrainNum - 1].blockNum[tElement]); Serial.print(", ");
-      Serial.print(trainProgress[tTrainNum - 1].entrySensor[tElement]); Serial.print(", ");
-      Serial.print(trainProgress[tTrainNum - 1].exitSensor[tElement]); Serial.print(";   ");
+      Serial.print(trainProgress[tTrainNum - 1].blockNum[tElement]); Serial.print(F(", "));
+      Serial.print(trainProgress[tTrainNum - 1].entrySensor[tElement]); Serial.print(F(", "));
+      Serial.print(trainProgress[tTrainNum - 1].exitSensor[tElement]); Serial.print(F(";   "));
       tElement = (tElement + 1) % MAX_BLOCKS_PER_TRAIN;
     }
-    Serial.print("End of train "); Serial.println(tTrainNum);
+    Serial.print(F("End of train ")); Serial.println(tTrainNum);
   }
   else {
-    Serial.print("Train number "); Serial.print(tTrainNum); Serial.println("'s Train Progress table is empty.");
+    Serial.print(F("Train number ")); Serial.print(tTrainNum); Serial.println(F("'s Train Progress table is empty."));
   }
 }
 
@@ -1951,9 +1952,9 @@ void initializeFRAM1AndGetControlBlock() {
 
   Serial.println(F("Here are the last-known train numbers, blocks, and directions retrieved from control block:"));
   for (byte i = 0; i < MAX_TRAINS; i++) {
-    Serial.print(lastTrainLoc[i].trainNum); Serial.print(", ");
-    Serial.print(lastTrainLoc[i].blockNum); Serial.print(", '");
-    Serial.print(lastTrainLoc[i].whichDirection); Serial.println("'");
+    Serial.print(lastTrainLoc[i].trainNum); Serial.print(F(", "));
+    Serial.print(lastTrainLoc[i].blockNum); Serial.print(F(", '"));
+    Serial.print(lastTrainLoc[i].whichDirection); Serial.println(F("'"));
   }
   return;
 }

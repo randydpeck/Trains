@@ -1,5 +1,5 @@
-// A-LEG Rev: 12/03/17.
-char APPVERSION[21] = "A-LEG Rev. 12/03/17";
+// A-LEG Rev: 07/19/18.
+char APPVERSION[21] = "A-LEG Rev. 07/19/18";
 
 // Include the following #define if we want to run the system with just the lower-level track.  Comment out to create records for both levels of track.
 #define SINGLE_LEVEL     // Comment this out for full double-level routes.  Use it for single-level route testing.
@@ -14,7 +14,7 @@ char APPVERSION[21] = "A-LEG Rev. 12/03/17";
 // GOOD IDEA: If smoke is on, how about a command to turn OFF smoke on all locos if they have been running for more than 10 minutes?
 
 
-
+// 07/19/18: Added F() macros to all Serial.print commands with literal text strings, saving 1 byte/char of RAM.
 // 09/16/17: Changed variable suffixes from Length to Len, No/Number to Num, Record to Rec, etc.
 // 02/29/17: Adding logic for Auto mode, and populating and processing Delayed Action and Train Progress tables.
 // 02/26/17: Added mode and state changed = false at top of get RS485 message main loop
@@ -167,7 +167,7 @@ char APPVERSION[21] = "A-LEG Rev. 12/03/17";
 
 // **************************************************************************************************************************
 
-#include <Train_Consts_Global.h>
+#include "Train_Consts_Global.h"
 const byte THIS_MODULE = ARDUINO_BTN;  // Not sure if/where I will use this - intended if I call a common function but will this "global" be seen there?
 byte RS485MsgIncoming[RS485_MAX_LEN];  // No need to initialize contents
 byte RS485MsgOutgoing[RS485_MAX_LEN];
@@ -185,7 +185,7 @@ bool stateChanged = false;
 // *** SERIAL LCD DISPLAY: The following lines are required by the Digole serial LCD display, connected to serial port 1.
 //const byte LCD_WIDTH = 20;        // Number of chars wide on the 20x04 LCD displays on the control panel
 #define _Digole_Serial_UART_      // To tell compiler compile the serial communication only
-#include <DigoleSerial.h>
+#include "DigoleSerial.h"
 DigoleSerialDisp LCDDisplay(&Serial1, 115200); //UART TX on arduino to RX on module
 //char lcdString[LCD_WIDTH + 1];    // Global array to hold strings sent to Digole 2004 LCD; last char is for null terminator.
 
@@ -205,7 +205,7 @@ DigoleSerialDisp LCDDisplay(&Serial1, 115200); //UART TX on arduino to RX on mod
 
 // *** SHIFT REGISTER: The following lines are required by the Centipede input/output shift registers.
 #include <Wire.h>                 // Needed for Centipede shift register
-#include <Centipede.h>
+#include "Centipede.h"
 Centipede shiftRegister;          // create Centipede shift register object
 
 // *** FRAM MEMORY MODULE:  Constants and variables needed for use with Hackscribble Ferro RAM.
@@ -218,7 +218,7 @@ Centipede shiftRegister;          // create Centipede shift register object
 //    Hackscribble_Ferro FRAM1(MB85RS64, PIN_FRAM1);
 // Control buffer in each FRAM is first 128 bytes (address 0..127) reserved for any special purpose we want such as config info.
 #include <SPI.h>
-#include <Hackscribble_Ferro.h>
+#include "Hackscribble_Ferro.h"
 const unsigned int FRAM_CONTROL_BUF_SIZE = 128;  // This defaults to 64 bytes in the library, but we modified it
 // FRAM1 stores the Route Reference, Park 1 Reference, and Park 2 Reference tables.
 // FRAM1 control block (first 128 bytes):
@@ -774,12 +774,12 @@ void loop() {
           // Now, create an entry in the newly-initialized Train Progress table for this newly-registered train...
           trainProgressEnqueue(tTrain, tBlock, tEntSns, tExtSns);
           // TEST CODE: DISPLAY RESULTS OF WHAT WE HAVE SO FAR...AS EACH TRAIN IS REGISTERED...
-          Serial.println("NEW TRAIN REGISTERED!");
-          Serial.print("Train number: "); Serial.println(tTrain);
-          Serial.print("Block number: "); Serial.println(tBlock);
-          Serial.print("Direction   : "); Serial.println(tDir);
-          Serial.print("Entry sensor: "); Serial.println(tEntSns);
-          Serial.print("Exit sensor : "); Serial.println(tExtSns);
+          Serial.println(F("NEW TRAIN REGISTERED!"));
+          Serial.print(F("Train number: ")); Serial.println(tTrain);
+          Serial.print(F("Block number: ")); Serial.println(tBlock);
+          Serial.print(F("Direction   : ")); Serial.println(tDir);
+          Serial.print(F("Entry sensor: ")); Serial.println(tEntSns);
+          Serial.print(F("Exit sensor : ")); Serial.println(tExtSns);
 
           // Now start up the train!  Do this by populating the Delayed Action table.
           // Start by adding a record for fast or slow startup.  Then set smoke Y/N, abs speed zero, and direction forward.
@@ -823,7 +823,7 @@ void loop() {
 
         } else {   // This is not a train data record; it's an "all done" record
           registrationComplete = true;
-          Serial.println("Registration complete.");
+          Serial.println(F("Registration complete."));
         }
       }     // End of "if registration complete is false" loop
     }       // It's a Train Registration message from A-OCC
@@ -1224,24 +1224,24 @@ void loop() {
     // possible that more than one record will have the same timestamp to execute, and since our loop is so fast
     // that would put us in the position of potentially sending Legacy commands less than 30ms apart.
 
-    Serial.print("We have a valid record to process!  Current time: ");
+    Serial.print(F("We have a valid record to process!  Current time: "));
     Serial.println(millis());
     Serial.print(actionElement.status);
-    Serial.print(", ");
+    Serial.print(F(", "));
     Serial.print(actionElement.sensorNum);
-    Serial.print(", ");
+    Serial.print(F(", "));
     Serial.print(actionElement.sensorTripType);
-    Serial.print(", ");
+    Serial.print(F(", "));
     Serial.print(actionElement.timeRipe);
-    Serial.print(", ");
+    Serial.print(F(", "));
     Serial.print(actionElement.cmdType);
-    Serial.print(", ");
+    Serial.print(F(", "));
     Serial.print(actionElement.deviceType);
-    Serial.print(", ");
+    Serial.print(F(", "));
     Serial.print(actionElement.deviceNum);
-    Serial.print(", ");
+    Serial.print(F(", "));
     Serial.print(actionElement.parm1);
-    Serial.print(", ");
+    Serial.print(F(", "));
     Serial.println(actionElement.parm2);
 
     // actionElement.deviceType (1 char) Engine or Train or blank if  n/a
@@ -1612,7 +1612,7 @@ void writeActionElement() {             // Add a new record to the Delayed Actio
   // If all previous records are unavailable, be sure to increment totalDelayedActionRecs
   if (availableDelayedActionRec == totalDelayedActionRecs) {     // Account for zero-offset record numbers vs. actual number of records occupied
     totalDelayedActionRecs++;   // We will expand the size of the table by one element
-    Serial.print("Expanded Delayed Action table to "); Serial.print(totalDelayedActionRecs); Serial.println(" records.");
+    Serial.print(F("Expanded Delayed Action table to ")); Serial.print(totalDelayedActionRecs); Serial.println(F(" records."));
   }
   // Now write the record to FRAM2 at record availableDelayedActionRec...
   // FRAM2.write requires a  buffer of type BYTE, not char or structure, so convert.
@@ -1699,7 +1699,7 @@ void legacyCmdBufTransmit() {
       if (b==0xF8 || b==0xF9 || b==0xFB) {    // It's a Legacy command
       } else if (b == 0xFE) {    // It's a TMCC command
       } else {
-        Serial.print("FATAL ERROR.  Unexpected data in Legacy buffer: ");
+        Serial.print(F("FATAL ERROR.  Unexpected data in Legacy buffer: "));
         Serial.println(b, HEX);
         endWithFlashingLED(7);  // Should never hit this!
       }
@@ -2035,7 +2035,7 @@ bool trainProgressIsEmpty(const byte tTrainNum) {
   if ((tTrainNum > 0) && (tTrainNum <= MAX_TRAINS)) {  // Looking at actual train numbers 1..MAX_TRAINS
     return (trainProgress[tTrainNum - 1].count == 0);
   } else {
-    Serial.println("FATAL ERROR!  Train number out of range in trainProgressIsEmpty."); // *********************** CHANGE TO STANDARD ALL-STOP FATAL ERROR IN REGULAR CODE
+    Serial.println(F("FATAL ERROR!  Train number out of range in trainProgressIsEmpty.")); // *********************** CHANGE TO STANDARD ALL-STOP FATAL ERROR IN REGULAR CODE
     while (true) {}
   }
 }
@@ -2046,7 +2046,7 @@ bool trainProgressIsFull(const byte tTrainNum) {
   if ((tTrainNum > 0) && (tTrainNum <= MAX_TRAINS)) {  // Looking at actual train numbers 1..MAX_TRAINS
     return (trainProgress[tTrainNum - 1].count == MAX_BLOCKS_PER_TRAIN);
   } else {
-    Serial.println("FATAL ERROR!  Train number out of range in trainProgressIsFull."); // *********************** CHANGE TO STANDARD ALL-STOP FATAL ERROR IN REGULAR CODE
+    Serial.println(F("FATAL ERROR!  Train number out of range in trainProgressIsFull.")); // *********************** CHANGE TO STANDARD ALL-STOP FATAL ERROR IN REGULAR CODE
     while (true) {}
   }
 }
@@ -2160,13 +2160,13 @@ void trainProgressDisplay(const byte tTrainNum) {
   // This is just used for debugging and can be removed from final code.
   // Iterates from tail, and prints out count number of elements, wraps around if necessary.
   if (!trainProgressIsEmpty(tTrainNum)) {   // In this case, actual train number tTrainNum, not tTrainNum - 1
-    Serial.print("Train number: "); Serial.println(tTrainNum);
-    Serial.print("Is Empty? "); Serial.println(trainProgressIsEmpty(tTrainNum));
-    Serial.print("Is Full?  "); Serial.println(trainProgressIsFull(tTrainNum));
-    Serial.print("Count:    "); Serial.println(trainProgress[tTrainNum - 1].count);
-    Serial.print("Head:     "); Serial.println(trainProgress[tTrainNum - 1].head);
-    Serial.print("Tail:     "); Serial.println(trainProgress[tTrainNum - 1].tail);
-    Serial.print("Data:     "); 
+    Serial.print(F("Train number: ")); Serial.println(tTrainNum);
+    Serial.print(F("Is Empty? ")); Serial.println(trainProgressIsEmpty(tTrainNum));
+    Serial.print(F("Is Full?  ")); Serial.println(trainProgressIsFull(tTrainNum));
+    Serial.print(F("Count:    ")); Serial.println(trainProgress[tTrainNum - 1].count);
+    Serial.print(F("Head:     ")); Serial.println(trainProgress[tTrainNum - 1].head);
+    Serial.print(F("Tail:     ")); Serial.println(trainProgress[tTrainNum - 1].tail);
+    Serial.print(F("Data:     "));
     // Start at tail and increment using modulo addition, traversing/searching each active block
     // tElement starts pointing at tail and will be incremented (modulo size) until it points at head
     byte tElement = trainProgress[tTrainNum - 1].tail;
@@ -2177,10 +2177,10 @@ void trainProgressDisplay(const byte tTrainNum) {
       Serial.print(trainProgress[tTrainNum - 1].exitSensor[tElement]); Serial.print(";   ");
       tElement = (tElement + 1) % MAX_BLOCKS_PER_TRAIN;
     }
-    Serial.print("End of train "); Serial.println(tTrainNum);
+    Serial.print(F("End of train ")); Serial.println(tTrainNum);
   }
   else {
-    Serial.print("Train number "); Serial.print(tTrainNum); Serial.println("'s Train Progress table is empty.");
+    Serial.print(F("Train number ")); Serial.print(tTrainNum); Serial.println(F("'s Train Progress table is empty."));
   }
 }
 

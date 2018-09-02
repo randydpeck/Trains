@@ -21,43 +21,37 @@
 #ifndef MESSAGE_MAS_h
 #define MESSAGE_MAS_h
 
-#include <Message_RS485.h>
-#include <Train_Consts_Global.h>
+#include "Message_RS485.h"
+#include "Train_Consts_Global.h"
 
 class Message_MAS : public Message_RS485 {
 
   public:
 
-    Message_MAS(HardwareSerial * hdwrSerial, long unsigned int baud, Display_2004 * myLCD);  // Constructor
+    Message_MAS(HardwareSerial * t_hdwrSerial, long unsigned int t_baud, Display_2004 * t_myLCD);  // Constructor
 
     // Note that we use the parent class, Message_RS485, for methods to get/set length, to, from, and type.  Checksum is handled automatically.
     // Here are the methods to return fields specific to this module's messages:
 
-    void setMode(byte tMsg[], byte tMode);  // Since the message is part of the object, we probably don't need to include tMsg as a parm? *****************************************
-    void setState(byte tMsg[], byte tState);  // Except maybe we do if we want separate send and receive buffers...???*************************************************************
+    void setMode(byte t_msg[], byte t_mode);  // Since the message is part of the object, we probably don't need to include tMsg as a parm? *****************************************
+    void setState(byte t_msg[], byte t_state);  // Except maybe we do if we want separate send and receive buffers...???*************************************************************
 
     byte getTurnoutButtonPress();  // A_MAS: Returns 0 if A_BTN isn't asking to send us any button presses; else returns button number that was pressed.
 
   private:
 
- //   Display_2004 * myLCD;
-    // Display_2004 is the name of our LCD class.
-    // So create a private pointer, called myLCD, a pointer to an object of that type (class.)
-
-    void send(byte tMsg[]);
+    void send(byte t_msg[]);
     // Generic send.  Checksum is automatically calcualted and inserted at the end of the message.
 
-    bool receive(byte tMsg[]);
+    bool receive(byte t_msg[]);
     // Generic receive (private).  Returns true or false, depending if a complete message was read, *and* if calling module cares about the message type.
     // tmsg[] is also "returned" by the function (populated, iff there was a complete message) since arrays are passed by reference.
     // IMPORTANT: We don't want to step on the contents of the receive buffer, so tMsg[] is only modified if we receive a message that the calling module wants to see.
 
-    byte getTurnoutButtonNum(byte tMsg[]);
+    byte getTurnoutButtonNum(byte t_msg[]);
     // A_MAS (private): Extracts button number from message sent by A_BTN to A_MAS with latest button press.  Internal function.
 
 };
-
-extern void checkIfHaltPinPulledLow();
 
 #endif
 

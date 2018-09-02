@@ -1,60 +1,65 @@
-// Rev: 07/14/18
+// Rev: 07/16/18
 // Message_RS485 handles RS485 (and *not* digital-pin) communications, via a specified serial port.
 
 // This class does *not* contain the byte-level/field-level knowledge of RS485 messages specific to each module.
 // However, it does know the byte locations of the fields for LENGTH, TO, FROM, and TYPE, and handles checksums.
 
-// 7/13/18: Need to modify to include incoming & outgoing message buffers as public attributes of class so they'll be created when we instantiate this single object *************
-// Then we shouldn't need to constantly pass tMsg[] back and forth from Message_XXX, right?  Not sure how that will affect use of "this" if there are two buffers...***************
-
 #ifndef MESSAGE_485_H
 #define MESSAGE_485_H
 
-#include <Train_Consts_Global.h>
-#include <Display_2004.h>  // WE SHOULD SEE IF WE CAN JUST FORWARD-DECLARE THIS SINCE WE'RE ONLY USING A POINTER TO THE LCD *******************************************************
+#include "Train_Consts_Global.h"
+#include "Display_2004.h"
 
 class Message_RS485
 {
   public:
 
-    Message_RS485(HardwareSerial * hdwrSerial, long unsigned int baud, Display_2004 * myLCD);  // Constructor
+    Message_RS485(HardwareSerial * t_hdwrSerial, long unsigned int t_baud, Display_2004 * t_myLCD);  // Constructor
 
-    bool RS485GetMessage(byte tMsg[]);
+    bool RS485GetMessage(byte t_msg[]);
     // RS485GetMessage returns true or false, depending if a complete message was read.
     // tmsg[] is also "returned" by the function (populated, iff there was a complete message) since arrays are passed by reference.
 
-    void RS485SendMessage(byte tMsg[]);
+    void RS485SendMessage(byte t_msg[]);
   
-    byte getLen(byte tMsg[]);   // Returns the 1-byte length of the RS485 message in tMsg[]
+    byte getLen(const byte t_msg[]);   // Returns the 1-byte length of the RS485 message in tMsg[]
 
-    byte getTo(byte tMsg[]);    // Returns the 1-byte "to" Arduino ID
+    byte getTo(const byte t_msg[]);    // Returns the 1-byte "to" Arduino ID
 
-    byte getFrom(byte tMsg[]);  // Returns the 1-byte "from" Arduino ID
+    byte getFrom(const byte t_msg[]);  // Returns the 1-byte "from" Arduino ID
 
-    char getType(byte tMsg[]);  // Returns the 1-char message type i.e. 'M' for Mode
+    char getType(const byte t_msg[]);  // Returns the 1-char message type i.e. 'M' for Mode
 
-    void setLen(byte tMsg[], byte len);    // Inserts message length i.e. 7 into the appropriate byte
+    byte getChecksum(const byte t_msg[]);  // Just retrieves a byte from an existing message; does not calculate checksum!
 
-    void setTo(byte tMsg[], byte to);      // Inserts "to" i.e. ARDUINO_BTN into the appropriate byte
+    void setLen(byte t_msg[], byte t_len);    // Inserts message length i.e. 7 into the appropriate byte
 
-    void setFrom(byte tMsg[], byte from);  // Inserts "from" i.e. ARDUINO_MAS into the appropriate byte
+    void setTo(byte t_msg[], byte t_to);      // Inserts "to" i.e. ARDUINO_BTN into the appropriate byte
 
-    void setType(byte tMsg[], char type);  // Inserts the message type i.e. 'M'ode into the appropriate byte
+    void setFrom(byte t_msg[], byte t_from);  // Inserts "from" i.e. ARDUINO_MAS into the appropriate byte
+
+    void setType(byte t_msg[], char t_type);  // Inserts the message type i.e. 'M'ode into the appropriate byte
 
   protected:
     
-    Display_2004 * myLCD;                  // Pointer to the 20x04 LCD display, used to display message processing errors and status.
+    Display_2004 * m_myLCD;                  // Pointer to the 20x04 LCD display, used to display message processing errors and status.
+    // Display_2004 is the name of our LCD class.  Create a private pointer, called myLCD, to an object of that type (class.)
+    // Because this is a protected variable, it will be shared with child classes such as Message_BTN.
+//    byte m_msgIncoming[RS485_MAX_LEN];       // Array for incoming RS485 messages.  No need to init contents.
+//    byte m_msgOutgoing[RS485_MAX_LEN];       // Array for outgoing RS485 messages.
+//    byte m_msgScratch[RS485_MAX_LEN];        // Temporarily holds message data when we don't want to clobber Incoming or Outgoing buffers.
 
   private:
 
-    HardwareSerial * mySerial;             // Pointer to the hardware serial port that we want to use.
-    long unsigned int myBaud;              // Baud rate for serial port i.e. 9600 or 115200
+    HardwareSerial * m_mySerial;             // Pointer to the hardware serial port that we want to use.
+    long unsigned int m_myBaud;              // Baud rate for serial port i.e. 9600 or 115200
 
-    byte calcChecksumCRC8(const byte data[], byte len);
+    byte calcChecksumCRC8(const byte t_msg[], byte t_len);  // Private function to calculate checksum of an incoming or outgoing message.
 
 };
 
+// The following declarations are shared with child classes (i.e. Message_BTN, etc.):
 extern char lcdString[];  // Global array to hold strings sent to Digole 2004 LCD; last char is for null terminator.
-extern void endWithFlashingLED(int numFlashes);
+extern void checkIfHaltPinPulledLow();
 
 #endif

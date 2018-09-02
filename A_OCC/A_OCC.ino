@@ -1,4 +1,4 @@
-char APPVERSION[21] = "A-OCC Rev. 12/03/17";
+char APPVERSION[21] = "A-OCC Rev. 07/19/18";
 
 // Include the following #define if we want to run the system with just the lower-level track.
 #define SINGLE_LEVEL     // Comment this out for full double-level routes.  Use it for single-level route testing.
@@ -32,6 +32,7 @@ char APPVERSION[21] = "A-OCC Rev. 12/03/17";
 // A-MAS has told A-LEG to depart...  But that would result in possibly unnecessary delays that A-MAS would need to impose, even when
 // A-OCC might not make an announcement for that train, for whatever reason...
 
+// 07/19/18: Added F() macros to all Serial.print commands with literal text strings, saving 1 byte/char of RAM.
 // 09/16/17: Changed variable suffixes from Length to Len, No/Number to Num, Record to Rec, etc.
 // 02/26/17: Added mode and state changed = false at top of get RS485 message main loop
 // STILL TO BE DONE:
@@ -163,7 +164,7 @@ char APPVERSION[21] = "A-OCC Rev. 12/03/17";
 
 // **************************************************************************************************************************
 
-#include <Train_Consts_Global.h>
+#include "Train_Consts_Global.h"
 const byte THIS_MODULE = ARDUINO_BTN;  // Not sure if/where I will use this - intended if I call a common function but will this "global" be seen there?
 byte RS485MsgIncoming[RS485_MAX_LEN];  // No need to initialize contents
 byte RS485MsgOutgoing[RS485_MAX_LEN];
@@ -181,7 +182,7 @@ bool stateChanged = false;
 // *** SERIAL LCD DISPLAY: The following lines are required by the Digole serial LCD display, connected to serial port 1.
 //const byte LCD_WIDTH = 20;        // Number of chars wide on the 20x04 LCD displays on the control panel
 #define _Digole_Serial_UART_      // To tell compiler compile the serial communication only
-#include <DigoleSerial.h>
+#include "DigoleSerial.h"
 DigoleSerialDisp LCDDisplay(&Serial1, 115200); //UART TX on arduino to RX on module
 //char lcdString[LCD_WIDTH + 1];    // Global array to hold strings sent to Digole 2004 LCD; last char is for null terminator.
 
@@ -201,7 +202,7 @@ DigoleSerialDisp LCDDisplay(&Serial1, 115200); //UART TX on arduino to RX on mod
 
 // *** SHIFT REGISTER: The following lines are required by the Centipede input/output shift registers.
 #include <Wire.h>                 // Needed for Centipede shift register
-#include <Centipede.h>
+#include "Centipede.h"
 Centipede shiftRegister;          // create Centipede shift register object
 
 // *** FRAM MEMORY MODULE:  Constants and variables needed for use with Hackscribble Ferro RAM.
@@ -214,7 +215,7 @@ Centipede shiftRegister;          // create Centipede shift register object
 //    Hackscribble_Ferro FRAM1(MB85RS64, PIN_FRAM1);
 // Control buffer in each FRAM is first 128 bytes (address 0..127) reserved for any special purpose we want such as config info.
 #include <SPI.h>
-#include <Hackscribble_Ferro.h>
+#include "Hackscribble_Ferro.h"
 const unsigned int FRAM_CONTROL_BUF_SIZE = 128;  // This defaults to 64 bytes in the library, but we modified it
 // FRAM1 stores the Route Reference, Park 1 Reference, and Park 2 Reference tables.
 // FRAM1 control block (first 128 bytes):
@@ -731,7 +732,7 @@ void loop() {
       } while(true);
       byte promptNum = getRotaryResponse(0);  // Returns user selected promptNum to 0..numRotaryPrompts - 1
       // Now send the prompt number "promptNum" (0..n) back to A-MAS...  First prompt sent by A-MAS is prompt 0, and so on.
-      Serial.println("Sending RS485 to A-MAS with results of query...");
+      Serial.println(F("Sending RS485 to A-MAS with results of query..."));
       RS485MsgOutgoing[RS485_LEN_OFFSET] = 6;   // Byte 0 is length of message
       RS485MsgOutgoing[RS485_TO_OFFSET] = ARDUINO_MAS;  // Byte 1 is "to".
       RS485MsgOutgoing[RS485_FROM_OFFSET] = ARDUINO_OCC;  // Byte 2 is "from".
@@ -768,7 +769,7 @@ void loop() {
         registrationInput[totalTrainsReceived - 1].lastBlock = RS485MsgIncoming[13];     // Default block number for this train
         registrationInput[totalTrainsReceived - 1].newBlock = 0;           // Not sure if we will use this
         registrationInput[totalTrainsReceived - 1].newDirection = ' ';     // Not sure if we will use this
-        Serial.print("Received train: '"); Serial.print(registrationInput[totalTrainsReceived - 1].trainName); Serial.println("'");
+        Serial.print(F("Received train: '")); Serial.print(registrationInput[totalTrainsReceived - 1].trainName); Serial.println(F("'"));
 
         if (RS485MsgIncoming[14] == 'N') {   // If this is not the last train record coming from A-MAS at this time
           do { } while (RS485GetMessage(RS485MsgIncoming) == false); // Get the next packet, guaranteed by A-MAS to be another train info record
@@ -777,7 +778,7 @@ void loop() {
           break;
         }
       } while(true);
-      Serial.print("Received info on "); Serial.print(totalTrainsReceived); Serial.println(" trains.");
+      Serial.print(F("Received info on ")); Serial.print(totalTrainsReceived); Serial.println(F(" trains."));
 
       // Now we have the default train data from A-MAS.  Use it, along with known occupied sensors, to prompt operator for
       // the train ID associated with every occupied block -- either a real train number, or STATIC.
@@ -1583,7 +1584,7 @@ bool trainProgressIsEmpty(const byte tTrainNum) {
   if ((tTrainNum > 0) && (tTrainNum <= MAX_TRAINS)) {  // Looking at actual train numbers 1..MAX_TRAINS
     return (trainProgress[tTrainNum - 1].count == 0);
   } else {
-    Serial.println("FATAL ERROR!  Train number out of range in trainProgressIsEmpty."); // *********************** CHANGE TO STANDARD ALL-STOP FATAL ERROR IN REGULAR CODE
+    Serial.println(F("FATAL ERROR!  Train number out of range in trainProgressIsEmpty.")); // *********************** CHANGE TO STANDARD ALL-STOP FATAL ERROR IN REGULAR CODE
     while (true) {}
   }
 }
@@ -1594,7 +1595,7 @@ bool trainProgressIsFull(const byte tTrainNum) {
   if ((tTrainNum > 0) && (tTrainNum <= MAX_TRAINS)) {  // Looking at actual train numbers 1..MAX_TRAINS
     return (trainProgress[tTrainNum - 1].count == MAX_BLOCKS_PER_TRAIN);
   } else {
-    Serial.println("FATAL ERROR!  Train number out of range in trainProgressIsFull."); // *********************** CHANGE TO STANDARD ALL-STOP FATAL ERROR IN REGULAR CODE
+    Serial.println(F("FATAL ERROR!  Train number out of range in trainProgressIsFull.")); // *********************** CHANGE TO STANDARD ALL-STOP FATAL ERROR IN REGULAR CODE
     while (true) {}
   }
 }
@@ -1708,13 +1709,13 @@ void trainProgressDisplay(const byte tTrainNum) {
   // This is just used for debugging and can be removed from final code.
   // Iterates from tail, and prints out count number of elements, wraps around if necessary.
   if (!trainProgressIsEmpty(tTrainNum)) {   // In this case, actual train number tTrainNum, not tTrainNum - 1
-    Serial.print("Train number: "); Serial.println(tTrainNum);
-    Serial.print("Is Empty? "); Serial.println(trainProgressIsEmpty(tTrainNum));
-    Serial.print("Is Full?  "); Serial.println(trainProgressIsFull(tTrainNum));
-    Serial.print("Count:    "); Serial.println(trainProgress[tTrainNum - 1].count);
-    Serial.print("Head:     "); Serial.println(trainProgress[tTrainNum - 1].head);
-    Serial.print("Tail:     "); Serial.println(trainProgress[tTrainNum - 1].tail);
-    Serial.print("Data:     "); 
+    Serial.print(F("Train number: ")); Serial.println(tTrainNum);
+    Serial.print(F("Is Empty? ")); Serial.println(trainProgressIsEmpty(tTrainNum));
+    Serial.print(F("Is Full?  ")); Serial.println(trainProgressIsFull(tTrainNum));
+    Serial.print(F("Count:    ")); Serial.println(trainProgress[tTrainNum - 1].count);
+    Serial.print(F("Head:     ")); Serial.println(trainProgress[tTrainNum - 1].head);
+    Serial.print(F("Tail:     ")); Serial.println(trainProgress[tTrainNum - 1].tail);
+    Serial.print(F("Data:     "));
     // Start at tail and increment using modulo addition, traversing/searching each active block
     // tElement starts pointing at tail and will be incremented (modulo size) until it points at head
     byte tElement = trainProgress[tTrainNum - 1].tail;
@@ -1725,10 +1726,10 @@ void trainProgressDisplay(const byte tTrainNum) {
       Serial.print(trainProgress[tTrainNum - 1].exitSensor[tElement]); Serial.print(";   ");
       tElement = (tElement + 1) % MAX_BLOCKS_PER_TRAIN;
     }
-    Serial.print("End of train "); Serial.println(tTrainNum);
+    Serial.print(F("End of train ")); Serial.println(tTrainNum);
   }
   else {
-    Serial.print("Train number "); Serial.print(tTrainNum); Serial.println("'s Train Progress table is empty.");
+    Serial.print(F("Train number ")); Serial.print(tTrainNum); Serial.println(F("'s Train Progress table is empty."));
   }
 }
 
@@ -1994,7 +1995,7 @@ bool RS485GetMessage(byte tMsg[]) {
       sendToLCD(lcdString);
       Serial.println(lcdString);
       for (int b = 0; b < tBufLen; b++) {  // Display the contents of incoming RS485 buffer on serial display
-        Serial.print(Serial2.read()); Serial.print(" ");
+        Serial.print(Serial2.read()); Serial.print(F(" "));
       }
       Serial.println();
       endWithFlashingLED(1);

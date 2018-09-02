@@ -1,5 +1,5 @@
-char APPVERSION[21] = "A-SWT Rev. 04/19/18";
-#include <Train_Consts_Global.h>
+char APPVERSION[21] = "A-SWT Rev. 07/19/18";
+#include "Train_Consts_Global.h"
 const byte THIS_MODULE = ARDUINO_SWT;  // Not sure if/where I will use this - intended if I call a common function but will this "global" be seen there?
 
 #include <avr/wdt.h>     // Required to call wdt_reset() for watchdog timer for turnout solenoids
@@ -11,6 +11,7 @@ const byte THIS_MODULE = ARDUINO_SWT;  // Not sure if/where I will use this - in
 // This is an "INPUT-ONLY" module that does not provide data to any other Arduino.
 
 // IMPORTANT: LARGE AMOUNTS OF THIS CODE ARE IDENTIAL IN A-LED, SO ALWAYS UPDATE A-LED WHEN WE MAKE CHANGES TO THIS CODE.
+// 07/19/18: Added F() macros to all Serial.print commands with literal text strings, saving 1 byte/char of RAM.
 // 04/22/18: Updating new global const, message and LCD display classes.
 // 09/16/17: Changed variable suffixes from Length to Len, No/Number to Num, Record to Rec, etc.
 // 11/01/16: checkIfHaltPulledLow(), if it was and we needed to halt, was not releasing the relays and thus could lock ON a solenoid!
@@ -71,7 +72,7 @@ const byte THIS_MODULE = ARDUINO_SWT;  // Not sure if/where I will use this - in
 
 
 // *** SERIAL LCD DISPLAY CLASS:
-#include <Display_2004.h>                // Class in quotes = in the A_SWT directory; angle brackets = in the library directory.
+#include "Display_2004.h"
 // Instantiate a Display_2004 object called "LCD2004".
 // Pass address of serial port to use (0..3) such as &Serial1, and baud rate such as 9600 or 115200.
 Display_2004 LCD2004(&Serial1, 115200);  // Instantiate 2004 LCD display "LCD2004."
@@ -79,14 +80,14 @@ Display_2004 * ptrLCD2004;               // Pointer will be passed to any other 
 char lcdString[LCD_WIDTH + 1];           // Global array to hold strings sent to Digole 2004 LCD; last char is for null terminator.
 
 // *** RS485/DIGITAL MESSAGE CLASS (Inter-Arduino communications):
-#include <Message_SWT.h>                 // Class includes all messages sent and received by A_SWT, including parent messages.
+#include "Message_SWT.h"                 // Class includes all messages sent and received by A_SWT, including parent messages.
 Message_SWT Message(ptrLCD2004);         // Instantiate message object "Message"; requires a pointer to the 2004 LCD display
 byte msgIncoming[RS485_MAX_LEN];         // Global array for incoming inter-Arduino messages.  No need to init contents.  Probably shouldn't call them "RS485" though.
 // byte msgOutgoing[RS485_MAX_LEN];    No need to initialize contents.  Also, A_SWT doesn't send any messages, not even digital lines.
 
 // *** SHIFT REGISTER CLASS:
 #include <Wire.h>                        // Needed for Centipede shift register.
-#include <Centipede.h>                   // Also, obviously, needed for Centipede.
+#include "Centipede.h"                   // Also, obviously, needed for Centipede.
 Centipede shiftRegister;                 // Instantiate Centipede shift register object "shiftRegister".
 
 // *** FRAM MEMORY MODULE:  Constants and variables needed for use with Hackscribble Ferro RAM.
@@ -99,7 +100,7 @@ Centipede shiftRegister;                 // Instantiate Centipede shift register
 //    Hackscribble_Ferro FRAM1(MB85RS64, PIN_FRAM1);
 // Control buffer in each FRAM is first 128 bytes (address 0..127) reserved for any special purpose we want such as config info.
 #include <SPI.h>                                    // FRAM uses SPI communications
-#include <Hackscribble_Ferro.h>                     // FRAM library
+#include "Hackscribble_Ferro.h"                     // FRAM library
 const unsigned int FRAM_CONTROL_BUF_SIZE = 128;     // This defaults to 64 bytes in the library, but we modified it
 // FRAM1 stores the Route Reference, Park 1 Reference, and Park 2 Reference tables.
 // FRAM1 control block (first 128 bytes):
@@ -504,6 +505,7 @@ bool turnoutCmdBufIsFull() {
 }
 
 void turnoutCmdBufEnqueue(const char tTurnoutDir, const byte tTurnoutNum) {
+// 09/01/18: Change this to return true or false, if successful or not, and let someone else display the fatal error.
   // Rev: 09/29/17.  Insert a record at the head of the turnout command buffer, then increment head and count.
   // If the buffer is already full, trigger a fatal error and terminate.
   // Although the two passed parameters are global, we are passing them for clarity.
@@ -513,7 +515,7 @@ void turnoutCmdBufEnqueue(const char tTurnoutDir, const byte tTurnoutNum) {
     turnoutCmdBufHead = (turnoutCmdBufHead + 1) % MAX_TURNOUTS_TO_BUF;
     turnoutCmdBufCount++;
   } else {
-    Serial.println("FATAL ERROR!  Turnout buffer overflow.");
+    Serial.println(F("FATAL ERROR!  Turnout buffer overflow."));
     sprintf(lcdString, "%.20s", "Turnout buf ovrflw!");
     LCD2004.send(lcdString);
     Serial.println(lcdString);

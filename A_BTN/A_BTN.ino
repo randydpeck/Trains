@@ -1,4 +1,4 @@
-#include <Train_Consts_Global.h>
+#include "Train_Consts_Global.h"
 char APPVERSION[LCD_WIDTH + 1] = "A-BTN Rev. 07/11/18";
 const byte THIS_MODULE = ARDUINO_BTN;  // Not sure if/where I will use this - intended if I call a common function but will this "global" be seen there?
 
@@ -64,23 +64,23 @@ byte stateCurrent = STATE_STOPPED;
 // previously created a "digoleLCD" object from the DigoleSerial class library, "LCD" is not a child class/object of digoleLCD.  When we instantiate
 // our LCD object, we'll pass it a pointer to the digoleLCD object, and then we can forget about the Digole class/object altogether.
 #define _Digole_Serial_UART_                  // Tell compiler to use only the serial part of the DigoleSerial class library
-#include <DigoleSerial.h>                     // Tell the compiler to use the DigoleSerial class library
+#include "DigoleSerial.h"                     // Tell the compiler to use the DigoleSerial class library
 // DigoleSerialDisp needs serial port address i.e. &Serial, &Serial1, &Serial2, or &Serial3.
 // DigoleSerialDisp also needs a valid baud rate, typically 9600 or 115200.
 DigoleSerialDisp digoleLCD(&Serial1, SERIAL1_SPEED);  // Instantiate and name the DigoleSerial object, required for the Display_2004 class.
-#include <Display_2004.h>                     // Our LCD message-display library; requires DigoleSerialDisp object "digoleLCD"
+#include "Display_2004.h"                     // Our LCD message-display library; requires DigoleSerialDisp object "digoleLCD"
 Display_2004 LCD(&digoleLCD);                 // Finally, instantiate our LCD object "LCD" by passing a pointer to the Digole LCD object.
 char lcdString[LCD_WIDTH + 1];                // Global array to hold strings sent to Digole 2004 LCD; last char is for null terminator.
 
 // *** RS485 & Digital Pin MESSAGE CLASS (Inter-Arduino communications):
-#include <Message_BTN.h>                      // This module's communitcation class, in its .ini directory
+#include "Message_BTN.h"                      // This module's communitcation class, in its .ini directory
 Message_BTN Message(&Serial2, SERIAL2_SPEED, &LCD);  // Instantiate our RS485/digital communications object "Message"
 byte msgIncoming[RS485_MAX_LEN];              // Global array for incoming inter-Arduino messages.  No need to init contents.
 byte msgOutgoing[RS485_MAX_LEN];              // No need to initialize contents.
 
 // *** SHIFT REGISTER: The following lines are required by the Centipede input/output shift registers.
 #include <Wire.h>                 // Needed for Centipede shift register
-#include <Centipede.h>
+#include "Centipede.h"
 Centipede shiftRegister;          // create Centipede shift register object
 
 // *** MISC CONSTANTS AND GLOBALS: needed by A-BTN:

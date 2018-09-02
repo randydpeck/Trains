@@ -1,10 +1,23 @@
-// Rev: 04/25/18
+// Rev: 07/14/18
 // Display_2004 handles display of messages from the modules to the 20-char, 4-line (2004) Digole LCD display.
+
+// 09/01/18: WARNING WARNING WARNING: The following constructor uses delay(), AND IT MUST NOT!  Replace with a
+// microsecond timer, which does work on Arduino pre-setup().
+
+// Also, I think I prefer method 2.
+// Also, why not make this a parent/child relationship?  Although it "uses" and LCD display, rather than being "a kind of" LCD display...???
+// How would we instantiate the object in that case?
+
+// Also, my C++ Primer book shows a containment example, where the main object's constructor references an
+// already-created object of the type being contained.  But what I'm doing below doesn't call the
+// digole constructor; it just references a pointer to an object of that type...  I'm confused.
+// Refer to the student class example in that book.
+// The way I've written it below, I'm using the digole class but my 2004 object doesn't *contain* it, I think...???  Why???
 
 #include "Display_2004.h"
 
-//Display_2004::Display_2004(HardwareSerial * hdwrSerial, long unsigned int baud) {  // Constructor for methods 1 or 2
-Display_2004::Display_2004(DigoleSerialDisp * digoleLCD) {  // Constructor using Method 3
+//Display_2004::Display_2004(HardwareSerial * t_hdwrSerial, long unsigned int t_baud) {  // Constructor for methods 1 or 2
+Display_2004::Display_2004(DigoleSerialDisp * t_digoleLCD) {  // Constructor using Method 3
 
   // DigoleSerialDisp is the name of the class in DigoleSerial.h/.cpp.  Note: Neither a parent nor a child class.
   // myLCD is a private pointer of type DigoleSerialDisp that will point to the Digole object.
@@ -16,9 +29,9 @@ Display_2004::Display_2004(DigoleSerialDisp * digoleLCD) {  // Constructor using
   // Also, it creates a new object each time the constructor is called, so you can have more than one LCD display.
   // The disadvantage is that use of "new" with Arduino is discouraged, because it may fragment the heap and memory is so small.
   // Constructor definition:
-  //   Display_2004::Display_2004(HardwareSerial * hdwrSerial, long unsigned int baud) {
+  //   Display_2004::Display_2004(HardwareSerial * t_hdwrSerial, long unsigned int t_baud) {
   // Constructor content:
-  //   myLCD = new DigoleSerialDisp(hdwrSerial, baud);
+  //   m_myLCD = new DigoleSerialDisp(t_hdwrSerial, t_baud);
   // hdwrSerial needs to be the address of Serial thru Serial3, a long unsigned int.
   // baud can be any legit baud rate such as 115200.
 
@@ -26,10 +39,10 @@ Display_2004::Display_2004(DigoleSerialDisp * digoleLCD) {  // Constructor using
   // It also has the advantage of encapsulating the use of the DigoleSerial class, so the calling .ino doesn't even know about it.
   // The disadvantage of Method 2 is that, by using static here, you can only have *one* LCD display object.  Which is fine in this case.
   // Constructor definition:
-  //   Display_2004::Display_2004(HardwareSerial * hdwrSerial, long unsigned int baud) {
+  //   Display_2004::Display_2004(HardwareSerial * t_hdwrSerial, long unsigned int t_baud) {
   // Constructor content:
-  //   static DigoleSerialDisp DigoleLCD(hdwrSerial, baud);
-  //   myLCD = &DigoleLCD;
+  //   static DigoleSerialDisp DigoleLCD(t_hdwrSerial, t_baud);
+  //   m_myLCD = &DigoleLCD;
 
   // Method 3 (USED HERE) requires you to instantiate the DigoleSerialDisp object in the calling .ino code, instead of this constructor.
   // It overcomes the disadvantages of both above methods: It does not use "new", and it allows instantiation of multiple objects.
@@ -37,37 +50,45 @@ Display_2004::Display_2004(DigoleSerialDisp * digoleLCD) {  // Constructor using
   // Digole class is no longer encapsulated in the Display_2004 class.
   // The calling .ino program would need to following lines:
   // #define _Digole_Serial_UART_  // To tell compiler compile the serial communication only
-  // #include <DigoleSerial.h>     // Tell the compiler to use the DigoleSerial class library
+  // #include "DigoleSerial.h"     // Tell the compiler to use the DigoleSerial class library
   // DigoleSerialDisp digoleLCD(&Serial1, (long unsigned int) 115200); // Instantiate and name the Digole object
-  // #include <Display_2004.h>                // Class in quotes = in the A_SWT directory; angle brackets = in the library directory.
+  // #include "Display_2004.h"                // Class in quotes = in the A_SWT directory; angle brackets = in the library directory.
   // Display_2004 LCD(&digoleLCD);  // Instantiate our LCD object called LCD, pass pointer to DigoleLCD
   // And the constructor definition would simply require a pointer to the Digole object:
   //   Display_2004::Display_2004(DigoleSerialDisp * digoleLCD) {  // Constructor for method 3
   // And the constructor would need this line:
 
-  myLCD = digoleLCD;  // METHOD 3: Assigns the Digole LCD pointer we were passed to our local private pointer
+  m_myLCD = t_digoleLCD;  // METHOD 3: Assigns the Digole LCD pointer we were passed to our local private pointer
 
+  // 07/14/18: Can't be part of constructor if it's called above init(), since constructor is called before Setup(), and you can't use delay() *or* Serial.begin() before Setup() on Arduino.
+  // However in this case, we're calling the constructor at the top of loop(), so it's no problem.
+  m_myLCD->begin();                     // Required to initialize LCD
+  m_myLCD->setLCDColRow(LCD_WIDTH, 4);  // Maps starting RAM address on LCD (if other than 1602)
+  m_myLCD->disableCursor();             // We don't need to see a cursor on the LCD
+  m_myLCD->backLightOn();
+  delay(30);                           // About 15ms required to allow LCD to boot before clearing screen
+  m_myLCD->clearScreen();               // FYI, won't execute as the *first* LCD command
+  delay(100);                          // At 115200 baud, needs > 90ms after CLS before sending text.  No delay needed at 9600 baud.
   return;
+
 
 }
 
-void Display_2004::init() {
+/* void Display_2004::init() {
 
-  // 07/13/18: Changed delays from 30/100 to 50/200, which fixed corrupted LCD @ 115200 baud.
-  // 07/10/18: Tried moving (even just some of) this code into constructor, but the display became non-responsive.  I think it's because this
-  // was effectively putting executable code in the .ini file *before* Setup().  So this init() needs to be called in Setup().
-  myLCD->begin();                     // Required to initialize LCD
-  myLCD->setLCDColRow(LCD_WIDTH, 4);  // Maps starting RAM address on LCD (if other than 1602)
-  myLCD->disableCursor();             // We don't need to see a cursor on the LCD
-  myLCD->backLightOn();
-  delay(50);                           // About 15ms required to allow LCD to boot before clearing screen
-  myLCD->clearScreen();               // FYI, won't execute as the *first* LCD command
-  delay(200);                          // At 115200 baud, needs > 90ms after CLS before sending text.  No delay needed at 9600 baud.
+  // 07/14/18: Can't be part of constructor since constructor is called before Setup(), and you can't use delay() before Setup() on Arduino.
+  m_myLCD->begin();                     // Required to initialize LCD
+  m_myLCD->setLCDColRow(LCD_WIDTH, 4);  // Maps starting RAM address on LCD (if other than 1602)
+  m_myLCD->disableCursor();             // We don't need to see a cursor on the LCD
+  m_myLCD->backLightOn();
+  delay(30);                           // About 15ms required to allow LCD to boot before clearing screen
+  m_myLCD->clearScreen();               // FYI, won't execute as the *first* LCD command
+  delay(100);                          // At 115200 baud, needs > 90ms after CLS before sending text.  No delay needed at 9600 baud.
   return;
 
-}
+} */
 
-void Display_2004::send(const char nextLine[]) {
+void Display_2004::send(const char t_nextLine[]) {
   // Display a line of information on the bottom line of the 2004 LCD display on the control panel, and scroll the old lines up.
   // Rev 10/20/17: Converted to OOP and rolled Digole class into this class.
   // INPUTS: nextLine[] is a char array, must be less than 20 chars plus null or system will trigger fatal error.
@@ -88,27 +109,27 @@ void Display_2004::send(const char nextLine[]) {
   static char lineD[21] = "                    ";
   // If the incoming char array (string) is longer than the 21-byte array (20 chars plus null), then we will
   // have stepped on memory and must declare a fatal programming error.
-  if ((nextLine == (char *)NULL) || (strlen(nextLine) > LCD_WIDTH)) endWithFlashingLED(13);
+  if ((t_nextLine == (char *)NULL) || (strlen(t_nextLine) > LCD_WIDTH)) endWithFlashingLED(13);
   // Scroll all lines up to make room for the new bottom line.
   strcpy(lineA, lineB);
   strcpy(lineB, lineC);
   strcpy(lineC, lineD);
-  strncpy(lineD, nextLine, LCD_WIDTH);         // Copy the new bottom line into lineD, padded to 20 chars with nulls.
+  strncpy(lineD, t_nextLine, LCD_WIDTH);         // Copy the new bottom line into lineD, padded to 20 chars with nulls.
   int newLineLen = strlen(lineD);    // Get the length of the new bottom line (to the first null char.)
   // Pad the new bottom line with trailing spaces as needed.
   while (newLineLen < LCD_WIDTH) lineD[newLineLen++] = ' ';  // Last byte not touched; always remains "null."
   // Update the display.  Updated 10/28/16 by TimMe to add delays to fix rare random chars on display.
-  myLCD->setPrintPos(0, 0);
-  myLCD->print(lineA);
+  m_myLCD->setPrintPos(0, 0);
+  m_myLCD->print(lineA);
   delay(1);
-  myLCD->setPrintPos(0, 1);
-  myLCD->print(lineB);
+  m_myLCD->setPrintPos(0, 1);
+  m_myLCD->print(lineB);
   delay(2);
-  myLCD->setPrintPos(0, 2);
-  myLCD->print(lineC);
+  m_myLCD->setPrintPos(0, 2);
+  m_myLCD->print(lineC);
   delay(3);
-  myLCD->setPrintPos(0, 3);
-  myLCD->print(lineD);
+  m_myLCD->setPrintPos(0, 3);
+  m_myLCD->print(lineD);
   delay(1);
   return;
 

@@ -1,5 +1,5 @@
-// A_SNS Rev: 10/01/17.
-char APPVERSION[21] = "A-SNS Rev. 10/01/17";
+// A_SNS Rev: 07/19/18.
+char APPVERSION[21] = "A-SNS Rev. 07/19/18";
 
 // A-SNS simply attempts to send RS485 messages for, initially, every sensor that is tripped, and after that, for any change.
 // This is an "OUTPUT-ONLY" module that does not monitor or respond to any other Arduino.
@@ -31,6 +31,7 @@ char APPVERSION[21] = "A-SNS Rev. 10/01/17";
 // when it is ready to do so.  This applies to all other slave Arduinos as well as this one.
 // We will also write messages to the LCD screen whenever we see a change in occupancy status.
 
+// 07/19/18: Added F() macros to all Serial.print commands with literal text strings, saving 1 byte/char of RAM.
 // 09/16/17: Changed variable suffixes from No and Number to Num, Length to Len, Record to Rec, etc.
 // 08/29/17: Cleaning up code, updated RS485 message protocol comments.  Changed sensor update array to structure.
 // 01/20/17: Add a short chirp each time we detect a sensor trip (not clear), before we even send a record to A-MAS,
@@ -75,7 +76,7 @@ char APPVERSION[21] = "A-SNS Rev. 10/01/17";
 
 // **************************************************************************************************************************
 
-#include <Train_Consts_Global.h>
+#include "Train_Consts_Global.h"
 const byte THIS_MODULE = ARDUINO_BTN;  // Not sure if/where I will use this - intended if I call a common function but will this "global" be seen there?
 byte RS485MsgIncoming[RS485_MAX_LEN];  // No need to initialize contents
 byte RS485MsgOutgoing[RS485_MAX_LEN];
@@ -85,7 +86,7 @@ char lcdString[LCD_WIDTH + 1];                   // Global array to hold strings
 // *** SERIAL LCD DISPLAY: The following lines are required by the Digole serial LCD display, connected to serial port 1.
 //const byte LCD_WIDTH = 20;        // Number of chars wide on the 20x04 LCD displays on the control panel
 #define _Digole_Serial_UART_      // To tell compiler compile the serial communication only
-#include <DigoleSerial.h>
+#include "DigoleSerial.h"
 DigoleSerialDisp LCDDisplay(&Serial1, 115200); //UART TX on arduino to RX on module
 //char lcdString[LCD_WIDTH + 1];    // Global array to hold strings sent to Digole 2004 LCD; last char is for null terminator.
 
@@ -105,7 +106,7 @@ DigoleSerialDisp LCDDisplay(&Serial1, 115200); //UART TX on arduino to RX on mod
 
 // *** SHIFT REGISTER: The following lines are required by the Centipede input/output shift registers.
 #include <Wire.h>                 // Needed for Centipede shift register
-#include <Centipede.h>
+#include "Centipede.h"
 Centipede shiftRegister;          // create Centipede shift register object
 
 // *** SENSOR STATE TABLE: Arrays contain 4 elements (unsigned ints) of 16 bits each = 64 bits = 1 Centipede
@@ -169,6 +170,25 @@ void loop() {
   // unsigned int sensorNewState[] = {65535,65535,65535,65535};  // A bit changes to zero when it is occupied.
   // First time into loop, we will see bits set for all occupied sensors - probably several.
   // Use: shiftRegister.portRead([0...7]) - Reads 16-bit value from one port (chip)
+
+  // 8/31/18: A note about *not* using a buffer to store sensor changes, rather than the following "blocking" code.
+  // We need a delay between sensor updates on RS485 so we don't overflow the incoming buffer of other Arduinos.
+  // A-OCC overflows if delay is 30ms or less, and it looks cool having it at the same 100ms delay as turnouts
+  // are thrown, so we'll use 100ms.
+  // If 8 trains are on the layout, plus perhaps another 8 (which would be a lot) "static" cars on sensors, that means it would
+  // take about 1.6 seconds to transmit all of the initial "occupied" sensor info to A_MAS when the system was started.
+  // In normal manual/auto operation, it would be highly unlikely for more than a couple of sensors to change state quickly.
+  // It's *possible* that the following loop could miss a sensor change if a given sensor changed states twice (i.e. a tripped
+  // sensor cleared and then tripped again, or a cleared sensor tripped and then cleared) during the time it takes to process
+  // a single set of changes.  So a sensor would have to do this in less time than it takes to process all changes, which could
+  // potentially be several hundred milliseconds.  
+  // However, since the sensors are on time-delay relays set to several seconds, we only need to ensure that the time-delay is
+  // set to some value that is longer than the maximum time it would take to get through the following loop.
+  // If the time-delay relays were set to 3 seconds, then we would need to have 30 sensor changes, which included at least one
+  // that was a "double change" (changed, then changed back to the original state) during those 3 seconds.  I think impossible.
+  // Thus, a buffer to store state changes and then to be doled out to RS485 every 100ms would be fine, but totally unnecessary
+  // in terms of the risk of missing any state changes.
+  // Nevertheless, it would be good programming practice, and thus eliminate the following "blocking" code.
 
   // Need to keep track of "before" and "after" values.
   bool stateChange = false;
@@ -345,7 +365,7 @@ bool RS485GetMessage(byte tMsg[]) {
       sendToLCD(lcdString);
       Serial.println(lcdString);
       for (int b = 0; b < tBufLen; b++) {  // Display the contents of incoming RS485 buffer on serial display
-        Serial.print(Serial2.read()); Serial.print(" ");
+        Serial.print(Serial2.read()); Serial.print(F(" "));
       }
       Serial.println();
       endWithFlashingLED(1);

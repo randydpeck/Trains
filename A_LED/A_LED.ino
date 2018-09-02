@@ -1,5 +1,5 @@
-char APPVERSION[21] = "A-LED Rev. 04/22/18";
-#include <Train_Consts_Global.h>
+char APPVERSION[21] = "A-LED Rev. 07/19/18";
+#include "Train_Consts_Global.h"
 const byte THIS_MODULE = ARDUINO_BTN;  // Not sure if/where I will use this - intended if I call a common function but will this "global" be seen there?
 
 // Include the following #define if we want to run the system with just the lower-level track.
@@ -24,6 +24,7 @@ const byte THIS_MODULE = ARDUINO_BTN;  // Not sure if/where I will use this - in
 // Note that HEAD == TAIL *both* when the buffer is empty and when full, so we use COUNT as the test for full/empty status.
 
 // IMPORTANT: LARGE AMOUNTS OF THIS CODE ARE IDENTIAL IN A-SWT, SO ALWAYS UPDATE A-SWT WHEN WE MAKE CHANGES TO THIS CODE.
+// 07/19/18: Added F() macros to all Serial.print commands with literal text strings, saving 1 byte/char of RAM.
 // 04/22/18: Updating new global const, message and LCD display classes.
 // 09/16/17: Changed variable suffixes from Length to Len, No/Number to Num, Record to Rec, etc.
 // 08/29/17: Cleaning up code, updated RS485 message protocol comments.
@@ -83,7 +84,7 @@ const byte THIS_MODULE = ARDUINO_BTN;  // Not sure if/where I will use this - in
 
 // **************************************************************************************************************************
 
-#include <Message_LED.h>
+#include "Message_LED.h"
 
 byte RS485MsgIncoming[RS485_MAX_LEN];  // No need to initialize contents
 byte RS485MsgOutgoing[RS485_MAX_LEN];
@@ -101,7 +102,7 @@ bool stateChanged = false;
 // *** SERIAL LCD DISPLAY: The following lines are required by the Digole serial LCD display, connected to serial port 1.
 //const byte LCD_WIDTH = 20;        // Number of chars wide on the 20x04 LCD displays on the control panel
 #define _Digole_Serial_UART_      // To tell compiler compile the serial communication only
-#include <DigoleSerial.h>
+#include "DigoleSerial.h"
 DigoleSerialDisp LCDDisplay(&Serial1, 115200); //UART TX on arduino to RX on module
 //char lcdString[LCD_WIDTH + 1];    // Global array to hold strings sent to Digole 2004 LCD; last char is for null terminator.
 
@@ -121,7 +122,7 @@ DigoleSerialDisp LCDDisplay(&Serial1, 115200); //UART TX on arduino to RX on mod
 
 // *** SHIFT REGISTER: The following lines are required by the Centipede input/output shift registers.
 #include <Wire.h>                 // Needed for Centipede shift register
-#include <Centipede.h>
+#include "Centipede.h"
 Centipede shiftRegister;          // create Centipede shift register object
 
 // *** FRAM MEMORY MODULE:  Constants and variables needed for use with Hackscribble Ferro RAM.
@@ -134,7 +135,7 @@ Centipede shiftRegister;          // create Centipede shift register object
 //    Hackscribble_Ferro FRAM1(MB85RS64, PIN_FRAM1);
 // Control buffer in each FRAM is first 128 bytes (address 0..127) reserved for any special purpose we want such as config info.
 #include <SPI.h>
-#include <Hackscribble_Ferro.h>
+#include "Hackscribble_Ferro.h"
 const unsigned int FRAM_CONTROL_BUF_SIZE = 128;  // This defaults to 64 bytes in the library, but we modified it
 // FRAM1 stores the Route Reference, Park 1 Reference, and Park 2 Reference tables.
 // FRAM1 control block (first 128 bytes):
@@ -561,7 +562,7 @@ void turnoutCmdBufEnqueue(const char tTurnoutDir, const byte tTurnoutNum) {
     turnoutCmdBufHead = (turnoutCmdBufHead + 1) % MAX_TURNOUTS_TO_BUF;
     turnoutCmdBufCount++;
   } else {
-    Serial.println("FATAL ERROR!  Turnout buffer overflow.");
+    Serial.println(F("FATAL ERROR!  Turnout buffer overflow."));
     sprintf(lcdString, "%.20s", "Turnout buf ovrflw!");
     sendToLCD(lcdString);
     Serial.println(lcdString);
