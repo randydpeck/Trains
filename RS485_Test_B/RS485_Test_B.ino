@@ -1,6 +1,7 @@
-/* Revised 3/17/16.
+/* Revised 7/10/20.
    
-   Test for Arduino A to send a command to Arduino B, wait for a response, and repeat many times to test reliability and speed.
+   Test for master Arduino to send a command to each slave Arduino, wait for a response, and repeat many times to test reliability and speed.
+   THIS IS THE CODE FOR THE SLAVES.
 
    Messages use the following format:
     Byte 0: Number of data bytes.  Total packet length will be this number plus 4 (bytes 0..2, plus checksum.) I.e. 2 for 2 data bytes.
@@ -40,10 +41,11 @@ DigoleSerialDisp mydisp(&Serial1, 9600); //UART TX on arduino to RX on module
 #define RS485MSGLENOFFSET  0  // first byte is always length in bytes
 #define RS485MSGTOOFFSET   1
 #define RS485MSGFROMOFFSET 2
-const byte RS485_RX_LED_PIN        =  6;      // Output: set HIGH to turn on YELLOW when RS485 is RECEIVING data
-const byte LED_PIN                 = 13;      // Built-in LED always pin 13
-const byte REQ_A_LEG_HALT_PIN      =  9;      // Output: Pull low to tell A-LEG to issue Legacy Emergency Stop FE FF FF
-const byte SPEAKER_PIN             =  7;      // Output: Piezo buzzer connects positive here
+const byte RS485_TX_LED_PIN        =  5;       // Output: set HIGH to turn on BLUE LED when RS485 is TRANSMITTING data
+const byte RS485_RX_LED_PIN        =  6;       // Output: set HIGH to turn on YELLOW when RS485 is RECEIVING data
+const byte LED_PIN                 = 13;       // Built-in LED always pin 13
+const byte REQ_A_LEG_HALT_PIN      =  9;       // Output: Pull low to tell A-LEG to issue Legacy Emergency Stop FE FF FF
+const byte SPEAKER_PIN             =  7;       // Output: Piezo buzzer connects positive here
 
 // Miscellaneious constants for RS485 etc.
 #define FALSE           0
@@ -76,53 +78,70 @@ void setup() {
   digitalWrite (SPEAKERPIN, HIGH);
   pinMode (RS485TXENABLE, OUTPUT);   // driver output enable
   digitalWrite (RS485TXENABLE, RS485RECEIVE);  // receive mode
-
-
-
+  pinMode(RS485_TX_LED_PIN, OUTPUT);
+  digitalWrite(RS485_TX_LED_PIN, LOW);    // Turn off RS485 "transmitting" LED
+  pinMode(RS485_RX_LED_PIN, OUTPUT);
+  digitalWrite(RS485_RX_LED_PIN, LOW);    // Turn off RS485 "receiving" LED
 
   // The following commands are required by the Digole serial LCD display
   mydisp.begin();  // Required to initialize LCD
   mydisp.setLCDColRow(20,4);  // Maps starting RAM address on LCD (if other than 1602)
   mydisp.disableCursor(); //We don't need to see a cursor on the LCD
   mydisp.backLightOn();
-  delay(20); // About 15ms required to allow LCD to boot before clearing screen
+  delay(25); // About 15ms required to allow LCD to boot before clearing screen. 7/11/20 changed from 20 to 25 to see if it fixes LCD problems.
   mydisp.clearScreen(); // FYI, won't execute as the *first* LCD command
   sendToLCD("RS485 Receive");
-
-  delay(300);
+  delay(1000);
   while(Serial2.read() > 0) {   // Clear out incoming RS485 serial buffer
    delay(1);
   }  
+  // delay(1000); // Added to just wait, but not so long that we miss the first broadcast from A_MAS
 }
 
 void loop() {
 
   // Wait for incoming message, check the checksum, and send back if no error.
   Serial.println("Checking incoming serial buffer...");
-  sendToLCD("Waiting...");
+  //sendToLCD("Waiting...");
   while(Serial2.available() == 0) {   // Wait for something to show up in the buffer
     delay(1);
   }
-
   Serial.println("Serial received...");
-  sendToLCD("Serial received");
-
+  //sendToLCD("Serial received.");
   // Don't bother getting the message until we have the whole thing in the RS485 serial buffer
   byte msgLen = Serial2.peek();     // First byte will be message length
   Serial.print("Message length is ");
   Serial.println(msgLen);
   Serial.println(String(msgLen));
-  sendToLCD("Msglen " + String(msgLen));
+  //sendToLCD("Msglen " + String(msgLen));
   if (getRS485Message(msgIncoming)) {  // Returns true only if a complete message was received via RS485
-    Serial.print("We have the whole message!  Process it...");
-    if (msgIncoming[RS485MSGTOOFFSET] != ARDUINO_SWT) {
-      // If the message isn't for us, then our little test isn't working properly.
-      sendToLCD("ERROR: Incoming not for A_SWT!");
-      while (TRUE) {}  // exit in infinite loop
+    Serial.println("We have the whole message!  Process it...");
+    switch (msgIncoming[RS485MSGTOOFFSET]) {
+      case ARDUINO_MAS:
+        sendToLCD("Message for A_MAS");
+        break;
+      case ARDUINO_LEG:
+        sendToLCD("Message for A_LEG");
+        break;
+      case ARDUINO_SNS:
+        sendToLCD("Message for A_SNS");
+        break;
+      case ARDUINO_BTN:
+        sendToLCD("Message for A_BTN");
+        break;
+      case ARDUINO_SWT:
+        sendToLCD("Message for A_SWT");
+        break;
+      case ARDUINO_OCC:
+        sendToLCD("Message for A_OCC");
+        break;
+      case ARDUINO_LED:
+        sendToLCD("Message for A_LED");
+        break;
+      //default:
     }
-    else {   // The message was intended for us - so far, so good
-      Serial.println("Message was for A-SWT.");
-      sendToLCD("So far so good.");
+    // Now if the message was for us, send a reply...
+    if (msgIncoming[RS485MSGTOOFFSET] == ARDUINO_OCC) {  // LEG, SNS, BTN, SWT, OCC, or LED  // ******* CHANGE 1 of 2 HERE
       byte msgLen = msgIncoming[RS485MSGLENOFFSET];
       // Now see if the CRC8 checksum is correct
       if (msgIncoming[msgLen - 1] != calcChecksumCRC8(msgIncoming, msgLen - 1)) {
@@ -130,12 +149,13 @@ void loop() {
         while (TRUE) {}
       }
       else {   // Incoming message had a good CRC - so far, so good again!
+        digitalWrite(RS485_TX_LED_PIN, HIGH);  // Turn on blue transmit LED on RS485 board
         Serial.println("CRC was good.");
-        sendToLCD("Good msg rec'd.");
+        //sendToLCD("Good msg rec'd.");
         byte msgLen = 8;
         msgOutgoing[0] = msgLen;
         msgOutgoing[1] = ARDUINO_MAS;  // To
-        msgOutgoing[2] = ARDUINO_LEG;  // From
+        msgOutgoing[2] = ARDUINO_OCC;  // From                                                  ******** CHANGE 2 of 2 HERE
         msgOutgoing[3] = msgIncoming[3];
         msgOutgoing[4] = msgIncoming[4];
         msgOutgoing[5] = msgIncoming[5];
@@ -145,18 +165,24 @@ void loop() {
         Serial.print(msgLen);
         Serial.println(" bytes.");
         digitalWrite(RS485TXENABLE, RS485TRANSMIT);  // transmit mode
-        for (int i = 0; i < msgLen; i++) {
+        Serial2.write(msgOutgoing, msgLen);   // New technique, writes the whole buffer at once.  Just simpler.
+        //for (int i = 0; i < msgLen; i++) {
           //      Serial2.write(msgOutgoing[i]);
-        }
-        //    Serial2.flush();    // wait for transmission of outgoing serial data to complete
+        //}
+        Serial2.flush();    // wait for transmission of outgoing serial data to complete
         digitalWrite(RS485TXENABLE, RS485RECEIVE);  // receive mode
-        Serial.println("Message sent.");
-        sendToLCD("Msg sent!");
+        digitalWrite(RS485_TX_LED_PIN, LOW);  // Turn off blue transmit LED on RS485 board
+        Serial.println("Reply sent to A_MAS.");
+        sendToLCD("Reply sent to A_MAS!");
       }  // End of "we have enough RS485 bytes for a complete message, so process it
     }
   }
-Serial.println("End of loop.");
+  // Serial.println("End of loop.");
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////
 /// Define various functions ///
@@ -196,6 +222,7 @@ boolean getRS485Message(byte tMsg[]) {
         endWithFlashingLED(1);
     }
     // At this point, we have a complete and legit message with good CRC, which may or may not be for us.
+delay(100); // so we can see the yellow LED
     digitalWrite(RS485_RX_LED_PIN, LOW);       // Turn off the receive LED
     return true;
   } else {     // We don't yet have an entire message in the incoming RS485 bufffer

@@ -1,4 +1,4 @@
-/*
+/*    MODIFIED 07/30/2019 by Randy: Eliminate FerroArray code to eliminate compiler warnings.
 
 	Hackscribble_Ferro Library
 	==========================
@@ -358,7 +358,7 @@ ferroResult Hackscribble_Ferro::write(unsigned long startAddress, byte numberOfB
 	return ferroOK;
 }
 
-/*
+
 unsigned long Hackscribble_Ferro::allocateMemory(unsigned long numberOfBytes, ferroResult& result)
 {
 	if ((_nextFreeByte + numberOfBytes) < _topAddress)
@@ -374,7 +374,7 @@ unsigned long Hackscribble_Ferro::allocateMemory(unsigned long numberOfBytes, fe
 		return 0;
 	}
 }
-*/
+
 
 ferroResult Hackscribble_Ferro::format()
 {
@@ -398,7 +398,8 @@ ferroResult Hackscribble_Ferro::format()
 	return result;
 }
 
-/*
+/* (commenting out all of the FerroArray code...)
+
 Hackscribble_FerroArray::Hackscribble_FerroArray(Hackscribble_Ferro& f, unsigned long numberOfElements, byte sizeOfElement, ferroResult &result): _f(f), _numberOfElements(numberOfElements), _sizeOfElement(sizeOfElement)
 {
 	// Creates array in FRAM
@@ -473,4 +474,5 @@ unsigned long Hackscribble_FerroArray::getStartAddress()
 {
 	return _startAddress;
 }
+
 */

@@ -1,4 +1,4 @@
-// Rev: 07/31/18
+// Rev: 01/16/19
 // Train_Consts_Global declares and defines all constants that are global to all (or nearly all) Arduino modules.
 
 // Header (.h) files should contain:
@@ -102,12 +102,12 @@ const byte PIN_MEGA_RX2            = 17;  // Serial 2 receive RS485 network
 const byte PIN_MEGA_TX2            = 16;  // Serial 2 transmit RS485 network
 const byte PIN_MEGA_RX3            = 15;  // Serial 3 receive A_LEG Legacy, A_OCC WAV Trigger
 const byte PIN_MEGA_TX3            = 14;  // Serial 3 transmit A_LEG Legacy, A_OCC WAV Trigger
-const byte PIN_MEGA_SDA            = 20;  // I2C
-const byte PIN_MEGA_SCL            = 21;  // I2C
-const byte PIN_MEGA_ =
-const byte PIN_MEGA_ =
-const byte PIN_MEGA_ =
-const byte PIN_MEGA_ =
+const byte PIN_MEGA_SDA            = 20;  // I2C (also pin 44)
+const byte PIN_MEGA_SCL            = 21;  // I2C (also pin 43)
+const byte PIN_MEGA_MISO           = 50;  // 
+const byte PIN_MEGA_MOSI           = 51;  // 
+const byte PIN_MEGA_SCK            = 52;  // 
+const byte PIN_MEGA_SS             = 53;  // 
 const byte PIN_FRAM1               = 11;  // Output: FRAM1 chip select.  Route Reference table and last-known-state of all trains.
 const byte PIN_FRAM2               = 12;  // Output: FRAM2 chip select.  Event Reference and Delayed Action tables.
 const byte PIN_FRAM3               = 19;  // Output: FRAM3 chip select.  **************************************************** WAIT, PIN 19 IS SERIAL 1 IN...??????????????????

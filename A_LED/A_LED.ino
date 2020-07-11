@@ -1,6 +1,6 @@
 char APPVERSION[21] = "A-LED Rev. 07/19/18";
 #include "Train_Consts_Global.h"
-const byte THIS_MODULE = ARDUINO_BTN;  // Not sure if/where I will use this - intended if I call a common function but will this "global" be seen there?
+const byte THIS_MODULE = ARDUINO_LED;  // Not sure if/where I will use this - intended if I call a common function but will this "global" be seen there?
 
 // Include the following #define if we want to run the system with just the lower-level track.
 #define SINGLE_LEVEL     // Comment this out for full double-level routes.  Use it for single-level route testing.
@@ -102,7 +102,7 @@ bool stateChanged = false;
 // *** SERIAL LCD DISPLAY: The following lines are required by the Digole serial LCD display, connected to serial port 1.
 //const byte LCD_WIDTH = 20;        // Number of chars wide on the 20x04 LCD displays on the control panel
 #define _Digole_Serial_UART_      // To tell compiler compile the serial communication only
-#include "DigoleSerial.h"
+#include "DigoleSerial\DigoleSerial.h"
 DigoleSerialDisp LCDDisplay(&Serial1, 115200); //UART TX on arduino to RX on module
 //char lcdString[LCD_WIDTH + 1];    // Global array to hold strings sent to Digole 2004 LCD; last char is for null terminator.
 
@@ -187,7 +187,7 @@ Hackscribble_Ferro FRAM1(MB85RS64, PIN_FRAM1);   // Create the FRAM1 object!
 // We don't need to worry about multiple Park routes, because those are executed one at a time.
 const byte MAX_TURNOUTS_TO_BUF            =  80;  // How many turnout commands might pile up before they can be executed?
 const unsigned long TURNOUT_ACTIVATION_MS = 110;  // How many milliseconds to hold turnout solenoids before releasing.
-const byte TOTAL_TURNOUTS                 =  32;  // Used to dimension our turnout_no/relay_no cross reference table.  30 connected, but 32 relays.
+//const byte TOTAL_TURNOUTS                 =  32;  // Used to dimension our turnout_no/relay_no cross reference table.  30 connected, but 32 relays. (included in Train_Consts_Global.h)
 const byte LED_DARK                       =   0;  // LED off
 const byte LED_GREEN_SOLID                =   1;  // Green turnout indicator LED lit solid
 const byte LED_GREEN_BLINKING             =   2;  // Green turnout indicator LED lit blinking

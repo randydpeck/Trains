@@ -1,6 +1,5 @@
-/*
-
-        10/17/16: RDP modified from default 0x40 to 0x80 by Randy RDP on 10/17/16 for 128-byte control block.  Affects one line only, below.
+/*   MODIFIED 07/20/2019 by Randy: Increased value of _maxBufferSize from 0x40 to 0x80 (64 bytes to 128 bytes).
+Also commented out all FerroArray code to eliminate compiler warnings.
 
 	Hackscribble_Ferro Library
 	==========================
@@ -100,7 +99,8 @@ private:
 
 	// Set maximum size of buffer used to write to and read from FRAM
 	// Do not exceed 0x80 to prevent problems with maximum size structs in FerroArray
-	static const byte _maxBufferSize = 0x80;   // This modified from default 0x40 to 0x80 by Randy RDP on 10/17/16 for 128-byte control block
+	static const byte _maxBufferSize = 0x80;  // Randy increased buffer size to 128 bytes
+	// [Original value was 0x40 = 64 bytes] static const byte _maxBufferSize = 0x40;
 
 	// Used in constructor to set size of usable FRAM memory, reserving some bytes as a control block
 	unsigned long _topAddressForPartNumber[numberOfPartNumbers];
@@ -126,7 +126,11 @@ private:
 
 public:
 
-	Hackscribble_Ferro(ferroPartNumber partNumber = MB85RS128A, byte chipSelect = SS);
+	// Hackscribble_Ferro(ferroPartNumber partNumber = MB85RS128A, byte chipSelect = SS);
+// Eliminating the following statement which seems to override my ability to specify the FRAM chip type...
+//	Hackscribble_Ferro(ferroPartNumber partNumber = MB85RS2MT, byte chipSelect = SS);  // **********************************************
+// And replacing it with this version...
+	Hackscribble_Ferro(ferroPartNumber partNumber, byte chipSelect = SS);
 	ferroResult begin();
 	ferroPartNumber getPartNumber();
 	byte readProductID();
@@ -144,7 +148,7 @@ public:
 
 };
 
-/*
+/* Commenting out the FerroArray class...
 class Hackscribble_FerroArray
 {
 private:

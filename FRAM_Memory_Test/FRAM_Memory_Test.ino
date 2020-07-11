@@ -1,3 +1,5 @@
+// 07/21/19: Updated to work with 256KB FRAM.
+// 07/06/20: Confirmed working correctly with new FRAM, except Visual Studio complains about FRAM1CBS in line 58 and 79 - not sure what isn't right but it works.
 // 10/18/16: By RDP.
 // Write and then read every byte on the entire FRAM chip, ensuring that the bytes read match what was written.
 // First run the test with all zoeros, and then will all ones (i.e. 255.)
@@ -7,10 +9,10 @@
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include <SPI.h>
-#include <Hackscribble_Ferro.h>
+#include "Hackscribble_Ferro.h"
 
 // 7/12/16: Modified FRAM library to change max buffer size from 64 bytes (then 96 bytes) to 128 bytes
-const byte FRAM1_PIN = 11;                // Digital pin 11 is CS for FRAM1, for Route Reference table used by many
+const byte FRAM1_PIN = 53;                // Digital pin 53 is standard CS for FRAM though any pin could be used.
 
 const unsigned int FRAM1_ROUTE_START = 128;   // Start writing FRAM1 Route Reference table data at this memory address, the lowest available address
 
@@ -25,14 +27,14 @@ void setup() {
   // Hackscribble_Ferro library uses standard Arduino SPI pin definitions:  MOSI, MISO, SCK.
   // Next statement creates an instance of Ferro using the standard Arduino SS pin and FRAM part number.
   // We use a customized version of the Hackscribble_Ferro library which specifies a control block length of 128 bytes.
-  // Other than that, we use the standard library.  Specify the chip as MB85RS64 (*not* MB85RS64V.)
+  // Other than that, we use the standard library.  Specify the chip as MB85RS2MT (previously MB85RS64, and not MB85RS64V.)
   // You specify a FRAM part number and SS pin number like this ...
   // Could create another instance using a different SS pin number for two FRAM chips
   
-  Hackscribble_Ferro FRAM1(MB85RS64, FRAM1_PIN);   // Use digital pin 11 for FRAM #1 chip select
-	
+  Hackscribble_Ferro FRAM1(MB85RS2MT, FRAM1_PIN);
+
   // Here are the possible responses from FRAM1.begin():
-  //   ferroOK = 0
+  //    ferroOK = 0
   //    ferroBadStartAddress = 1
   //    ferroBadNumberOfBytes = 2
   //    ferroBadFinishAddress = 3
@@ -63,12 +65,14 @@ void setup() {
   Serial.println(FRAM1CBS);           // result = 128 (with modified library)
   Serial.print("Bottom (should be 128): ");
   Serial.println(FRAM1Bottom);        // result = 128
-  Serial.print("Top (should be 8191): ");
-  Serial.println(FRAM1Top);           // result = 8191
+  Serial.print("Top (should be 262143 = 256K less one): ");
+  Serial.println(FRAM1Top);           // result = 262143 (was 8191)
 
-  Serial.println("Press Enter to begin...");
-  while (Serial.available() == 0) {}
-  
+
+Serial.println("Press Enter to begin...");
+while (Serial.available() == 0) {}
+Serial.read();  
+
   // Define and write then read control block (first 128 bytes of FRAM):
   // FRAM1 Control Block:  Write and test all zeroes, then all ones (255s.)
 
@@ -79,10 +83,33 @@ void setup() {
     FRAM1ControlBuffer[i] = 0;
   }
   FRAM1.writeControlBlock(FRAM1ControlBuffer);
+
+  Serial.println("Now reading and displaying control buffer to be sure it's all zeroes...");
+  FRAM1.readControlBlock(FRAM1ControlBuffer);
+  for (byte i = 0; i < FRAM1CBS; i++) {
+    Serial.print(FRAM1ControlBuffer[i]); Serial.print(" ");
+  }
+  Serial.println();
+  
   Serial.println("Scrambling control buffer array...");
   for (byte i = 0; i < FRAM1CBS; i++) {
     FRAM1ControlBuffer[i] = 170;
   }
+  FRAM1.writeControlBlock(FRAM1ControlBuffer);
+
+  Serial.println("Now reading and displaying control buffer to be sure it's all 170s...");
+  FRAM1.readControlBlock(FRAM1ControlBuffer);
+  for (byte i = 0; i < FRAM1CBS; i++) {
+    Serial.print(FRAM1ControlBuffer[i]); Serial.print(" ");
+  }
+  Serial.println();
+
+  Serial.println("Setting control buffer in memory to all zoeres...");
+  for (byte i = 0; i < FRAM1CBS; i++) {
+    FRAM1ControlBuffer[i] = 0;
+  }
+  FRAM1.writeControlBlock(FRAM1ControlBuffer);
+  
   Serial.println("Now reading and displaying control buffer to be sure it's all zeroes...");
   FRAM1.readControlBlock(FRAM1ControlBuffer);
   for (byte i = 0; i < FRAM1CBS; i++) {
@@ -110,18 +137,26 @@ void setup() {
   Serial.println("End of Control Block code.");
   Serial.println();
 
-  Serial.println("Now setting memory buffer to all zeroes...");
+  Serial.println("Now testing all the rest of memory, by the byte and by the 128-byte chunk...");
   for (byte i = 0; i < FRAM1CBS; i++) {
     FRAM1ControlBuffer[i] = 0;
   }
 
   // Now write code to write and then read every "regular" memory byte with zeroes and 255s.
 
-  Serial.println("Now filling memory will all zeroes...");
+//  Serial.println("Now filling memory will all zeroes, one byte at a time...");
   unsigned long startTime = millis();
   unsigned long stopTime;
-  for (unsigned long FRAMAddress = FRAM1Bottom; FRAMAddress < (FRAM1Top + 1); FRAMAddress++) {
-    byte byteToWrite[] = {0};
+
+
+Serial.println("Press Enter to begin...");
+while (Serial.available() == 0) {}
+Serial.read();  
+/*
+  
+  byte byteToWrite[] = {0};
+  
+  for (unsigned long FRAMAddress = FRAM1Bottom; FRAMAddress < FRAM1Top; FRAMAddress++) {
     FRAM1.write(FRAMAddress, 1, byteToWrite);  // (address, number_of_bytes_to_write, data    
   }
   stopTime = millis();
@@ -130,8 +165,8 @@ void setup() {
   
   Serial.println("Now reading every byte to confirm it is zero...");
   startTime = millis();
-  for (unsigned long FRAMAddress = FRAM1Bottom; FRAMAddress < (FRAM1Top + 1); FRAMAddress++) {
-    byte byteToWrite[] = {255};
+  byteToWrite[0] = {255};
+  for (unsigned long FRAMAddress = FRAM1Bottom; FRAMAddress < FRAM1Top; FRAMAddress++) {
     FRAM1.read(FRAMAddress, 1, byteToWrite);  // (address, number_of_bytes_to_write, data
     if (byteToWrite[0] != 0) {
       Serial.println("Write error 1.");
@@ -144,14 +179,14 @@ void setup() {
     
   Serial.println("Okay, every byte read was a zero.");
   Serial.println("Now filling memory with all 255s...");
-  for (unsigned long FRAMAddress = FRAM1Bottom; FRAMAddress < (FRAM1Top + 1); FRAMAddress++) {
-    byte byteToWrite[] = {255};
+  byteToWrite[0] = {255};
+  for (unsigned long FRAMAddress = FRAM1Bottom; FRAMAddress < FRAM1Top; FRAMAddress++) {
     FRAM1.write(FRAMAddress, 1, byteToWrite);  // (address, number_of_bytes_to_write, data    
   }
 
   Serial.println("Now reading every byte to confirm it is 255...");
-  for (unsigned long FRAMAddress = FRAM1Bottom; FRAMAddress < (FRAM1Top + 1); FRAMAddress++) {
-    byte byteToWrite[] = {0};
+  byteToWrite[0] = {0};
+  for (unsigned long FRAMAddress = FRAM1Bottom; FRAMAddress < FRAM1Top; FRAMAddress++) {
     FRAM1.read(FRAMAddress, 1, byteToWrite);  // (address, number_of_bytes_to_write, data
     if (byteToWrite[0] != 255) {
       Serial.println("Write error 2.");
@@ -160,6 +195,109 @@ void setup() {
   }
   Serial.println("Okay, every byte read was a 255.");
   Serial.println("");
+
+*/
+
+
+
+
+
+ 
+  // Now let's write and read the entire memory in 128-byte blocks.  
+  // There are 2,048 128-byte blocks in 256KB.  The first block is the control block, so
+  // we can write 2,047 blocks, starting at offset 128.
+
+  Serial.println("Now filling memory with 85's = 01010101...");
+  startTime = millis();
+  for (byte i = 0; i < FRAM1CBS; i++) {
+    FRAM1ControlBuffer[i] = 85;
+  }
+  for (unsigned long FRAMAddress = FRAM1Bottom; FRAMAddress < FRAM1Top; FRAMAddress=FRAMAddress+FRAM1BufferSize) {
+    FRAM1.write(FRAMAddress, FRAM1BufferSize, FRAM1ControlBuffer);  // (address, number_of_bytes_to_write, data
+//    Serial.print(FRAMAddress); Serial.print(" ");
+  }
+  Serial.println();
+  
+  stopTime = millis();
+  Serial.print("Time to write in 128-byte blocks = ");
+  Serial.println(stopTime - startTime);
+  
+  Serial.println("Now reading every block to confirm it is 85...");
+  
+Serial.println("Press Enter to begin...");
+while (Serial.available() == 0) {}
+Serial.read();
+  
+  startTime = millis();
+  for (unsigned long FRAMAddress = FRAM1Bottom; FRAMAddress < FRAM1Top; FRAMAddress=FRAMAddress+FRAM1BufferSize) {
+    for (byte i = 0; i < FRAM1CBS; i++) {
+      FRAM1ControlBuffer[i] = 0;
+    }
+    FRAM1.read(FRAMAddress, FRAM1BufferSize, FRAM1ControlBuffer);  // (address, number_of_bytes_to_read, data
+    for (byte i = 0; i < FRAM1CBS; i++) {
+      if (FRAM1ControlBuffer[i] != 85) {
+        Serial.println("Read/write error 85.");
+        Serial.print("FRAMAddress = "); Serial.println(FRAMAddress);
+        while (true) { }
+      }
+    }
+//    Serial.print(FRAMAddress); Serial.print(" ");
+  }
+  Serial.println();
+  stopTime = millis();
+  Serial.print("Time to read in 128-byte blocks = ");
+  Serial.println(stopTime - startTime);
+  Serial.println("Okay, every byte read was an 85.");
+
+  Serial.println("Now filling memory with all 170s = 10101010...");
+
+
+Serial.println("Press Enter to begin...");
+while (Serial.available() == 0) {}
+Serial.read();
+  
+  startTime = millis();
+  for (byte i = 0; i < FRAM1CBS; i++) {
+    FRAM1ControlBuffer[i] = 170;
+  }
+  for (unsigned long FRAMAddress = FRAM1Bottom; FRAMAddress < (FRAM1Top); FRAMAddress=FRAMAddress+FRAM1BufferSize) {
+    FRAM1.write(FRAMAddress, FRAM1BufferSize, FRAM1ControlBuffer);  // (address, number_of_bytes_to_write, data    
+//    Serial.print(FRAMAddress); Serial.print(" ");
+  }
+  Serial.println();
+  stopTime = millis();
+  Serial.print("Time to write in 128-byte blocks = ");
+  Serial.println(stopTime - startTime);
+  
+  Serial.println("Now reading every block to confirm it is 170...");
+  
+Serial.println("Press Enter to begin...");
+while (Serial.available() == 0) {}
+Serial.read();
+  
+  startTime = millis();
+  for (unsigned long FRAMAddress = FRAM1Bottom; FRAMAddress < (FRAM1Top); FRAMAddress=FRAMAddress+FRAM1BufferSize) {
+    for (byte i = 0; i < FRAM1CBS; i++) {
+      FRAM1ControlBuffer[i] = 0;
+    }
+    FRAM1.read(FRAMAddress, FRAM1BufferSize, FRAM1ControlBuffer);  // (address, number_of_bytes_to_read, data
+    for (unsigned int i = 0; i < FRAM1BufferSize; i++) {
+      if (FRAM1ControlBuffer[i] != 170) {
+        Serial.println("Write error 3.");
+        while (true) { }
+      }
+    }
+//    Serial.print(FRAMAddress); Serial.print(" ");
+  }
+  Serial.println();
+
+  stopTime = millis();
+  Serial.print("Time to read in 128-byte blocks = ");
+  Serial.println(stopTime - startTime);
+  
+  Serial.println("Okay, every byte read was a 170.");
+  Serial.println("");
+  
   Serial.println("All tests passed!");
 
 }

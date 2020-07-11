@@ -1,7 +1,7 @@
 // POPULATE FRAM 1 Rev: 12/03/17.
 
 // Include the following #define if we want to run the system with just the lower-level track.  Comment out to create records for both levels of track.
-//#define SINGLE_LEVEL     // Comment this out for full double-level routes.  Use it for single-level route testing.
+#define SINGLE_LEVEL     // Comment this out for full double-level routes.  Use it for single-level route testing.
 
 byte FRAM1Version[3] = {12, 03, 17 };  // Date will be placed in FRAM1 control block as the first three bytes
 byte FRAM2Version[3] = { 9, 16, 17 };  // Date will be placed in FRAM2 control block as the first three bytes
@@ -56,7 +56,7 @@ byte FRAM2Version[3] = { 9, 16, 17 };  // Date will be placed in FRAM2 control b
 // 2. The Park 1 Reference table
 // 3. The Park 2 Reference table
 
-const byte PIN_FRAM1           = 11;  // Digital pin 11 is CS for FRAM1, for Route Reference table used by many, and last-known-state of all trains
+const byte PIN_FRAM1           = 53;  // Use 53 for CS.  Digital pin 11 is CS for FRAM1, for Route Reference table used by many, and last-known-state of all trains
 const byte PIN_FRAM2           = 12;  // FRAM2 used by A-LEG for Event Reference and Delayed Action tables
 
 // *** FRAM MEMORY MODULE:  Constants and variables needed for use with Hackscribble Ferro RAM.
@@ -94,7 +94,10 @@ const byte         FRAM1_PARK1_RECS         =  19;
 const unsigned int FRAM1_PARK2_START        = FRAM1_PARK1_START + (FRAM1_PARK1_REC_LEN * FRAM1_PARK1_RECS);
 const byte         FRAM1_PARK2_REC_LEN      =  52;  // Was 43 until 12/3/17
 const byte         FRAM1_PARK2_RECS         =   4;
-Hackscribble_Ferro FRAM1(MB85RS64, PIN_FRAM1);   // Create the FRAM1 object!
+
+//Hackscribble_Ferro FRAM1(MB85RS64, PIN_FRAM1);   // Create the FRAM1 object!
+//Hackscribble_Ferro   FRAM1(MB85RS2MT, PIN_FRAM1);   // Create the FRAM1 object!
+
 // FRAM2 control block (first 128 bytes) contains no data - we don't need a version number because we don't have any initial data to read.
 // FRAM2 stores the Delayed Action table.  Table is 12 bytes per record, perhaps 400 records => approx. 5K bytes.
 byte               FRAM2ControlBuf[FRAM_CONTROL_BUF_SIZE];
@@ -102,7 +105,7 @@ unsigned int       FRAM2BufSize             =   0;  // We will retrieve this via
 unsigned long      FRAM2Bottom              =   0;  // Should be 128 (address 0..127)
 unsigned long      FRAM2Top                 =   0;  // Highest address we can write to...should be 8191 (addresses are 0..8191 = 8192 bytes total)
 byte               FRAM2GotVersion[3]       = {  0,  0,  0 };  // This will hold the version retrieved from FRAM2, to confirm matches version above.
-Hackscribble_Ferro FRAM2(MB85RS64, PIN_FRAM2);  // Create the FRAM2 object!
+//Hackscribble_Ferro FRAM2(MB85RS2MT, PIN_FRAM2);  // Create the FRAM2 object!
 // Repeat above for FRAM3 if we need a third FRAM
 
 const unsigned int FRAM1_TOP_ADDRESS = FRAM1_PARK2_START + (FRAM1_PARK2_REC_LEN * FRAM1_PARK2_RECS) - 1;
@@ -309,6 +312,7 @@ park2Reference park2Element;  // Use this to hold individual elements when retri
 
 #endif   // COMPILE_ROUTE
 
+
 #ifdef COMPILE_PARK
 
   park1Reference park1Array[FRAM1_PARK1_RECS] = {
@@ -384,12 +388,17 @@ void setup() {
   // Other than that, we use the standard library.  Specify the chip as MB85RS64 (*not* MB85RS64V.)
   // You specify a FRAM part number and SS pin number like this ...
   // Could create another instance using a different SS pin number for two FRAM chips
+
+// 07-19-19 Commented out the following line; I already instantiated FRAM1 above, so this seems like a duplicate...  
+//  Hackscribble_Ferro FRAM1(MB85RS2MT, PIN_FRAM1);   // Use digital pin 11 for FRAM #1 chip select
+//Hackscribble_Ferro   FRAM1(MB85RS2MT, PIN_FRAM1);   // Create the FRAM1 object!
+Hackscribble_Ferro   FRAM1(MB85RS2MT);   // Create the FRAM1 object!
   
-  Hackscribble_Ferro FRAM1(MB85RS64, PIN_FRAM1);   // Use digital pin 11 for FRAM #1 chip select
-	
-  if (FRAM1.begin())  // Any non-zero result is an error
+  int fStat = FRAM1.begin();
+  if (fStat != 0)  // Any non-zero result is an error
   {
-    Serial.println("FRAM response not OK");
+    Serial.print("FRAM response not OK.  Status = ");
+    Serial.println(fStat);
     while (1) {};
   }
   Serial.println("FRAM response OK.");
@@ -402,8 +411,8 @@ void setup() {
   Serial.println(FRAM1BufSize);    // result = 128 (with modified library)
   Serial.print("Bottom (should be 128): ");
   Serial.println(FRAM1Bottom);        // result = 128
-  Serial.print("Top (should be 8191): ");
-  Serial.println(FRAM1Top);           // result = 8191
+  Serial.print("Top (should be 262143 = 256K): ");
+  Serial.println(FRAM1Top);           // result = 262143 (old 8K FRAM was 8191)
 
   // Define and write then read control block (first 128 bytes of FRAM):
   // FRAM1 Control Block:

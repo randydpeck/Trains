@@ -93,7 +93,8 @@ const unsigned long RELEASE_DELAY_MS = 200;  // Force operator to wait this many
 
 void setup() {
 
-  LCD.init();                           // Initialize the 20 x 04 Digole serial LCD display object "LCD."  Needs to be done here, not in LCD constructor.
+//  LCD.init();                           // Initialize the 20 x 04 Digole serial LCD display object "LCD."  Needs to be done here, not in LCD constructor.
+    // 1/16/19 commented the above out because I rolled the init into the constructor, documented in Display_2004...
   Serial.begin(SERIAL0_SPEED);          // PC serial monitor window
   // Serial1 is for the Digole 20x4 LCD debug display, already set up
   // Serial2 is for our RS485 message bus, already set up

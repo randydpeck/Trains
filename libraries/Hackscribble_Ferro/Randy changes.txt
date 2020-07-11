@@ -1,0 +1,7 @@
+Rev: July 30, 2019
+
+Started with the 1.51 (19 June 2016) version of the Hackscribble Ferro library.
+
+I make *one* change: modified the value of _maxBufferSize, in Hackscribble_Ferro.h, fro 0x40 (64 bytes) to 0x80 (128 bytes.)
+
+I also commented out references to FerroArray in the .h and .cpp files, to eliminate compiler warnings since I don't use the array feature anyway.

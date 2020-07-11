@@ -1,0 +1,43 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30011.22
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FRAM_Memory_Test", "FRAM_Memory_Test.vcxproj", "{C5F80730-F44F-4478-BDAE-6634EFC2CA88}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Processing_Receive_Routes", "..\Processing_Receive_Routes\Processing_Receive_Routes.vcxproj", "{63E7B5EA-C271-4765-A798-C63B7C126D88}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RS485_Test_A", "..\..\Archive and Backup\Arduino 2017-01-17\RS485_Test_A\RS485_Test_A.vcxproj", "{812179C2-BC34-4C8F-8A64-8302D2213B27}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RS485_Test_B", "..\RS485_Test_B\RS485_Test_B.vcxproj", "{478495D5-8E24-47C9-9F08-37F36CCA742C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x86 = Debug|x86
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C5F80730-F44F-4478-BDAE-6634EFC2CA88}.Debug|x86.ActiveCfg = Debug|Win32
+		{C5F80730-F44F-4478-BDAE-6634EFC2CA88}.Debug|x86.Build.0 = Debug|Win32
+		{C5F80730-F44F-4478-BDAE-6634EFC2CA88}.Release|x86.ActiveCfg = Release|Win32
+		{C5F80730-F44F-4478-BDAE-6634EFC2CA88}.Release|x86.Build.0 = Release|Win32
+		{63E7B5EA-C271-4765-A798-C63B7C126D88}.Debug|x86.ActiveCfg = Debug|Win32
+		{63E7B5EA-C271-4765-A798-C63B7C126D88}.Debug|x86.Build.0 = Debug|Win32
+		{63E7B5EA-C271-4765-A798-C63B7C126D88}.Release|x86.ActiveCfg = Release|Win32
+		{63E7B5EA-C271-4765-A798-C63B7C126D88}.Release|x86.Build.0 = Release|Win32
+		{812179C2-BC34-4C8F-8A64-8302D2213B27}.Debug|x86.ActiveCfg = Debug|Win32
+		{812179C2-BC34-4C8F-8A64-8302D2213B27}.Debug|x86.Build.0 = Debug|Win32
+		{812179C2-BC34-4C8F-8A64-8302D2213B27}.Release|x86.ActiveCfg = Release|Win32
+		{812179C2-BC34-4C8F-8A64-8302D2213B27}.Release|x86.Build.0 = Release|Win32
+		{478495D5-8E24-47C9-9F08-37F36CCA742C}.Debug|x86.ActiveCfg = Debug|Win32
+		{478495D5-8E24-47C9-9F08-37F36CCA742C}.Debug|x86.Build.0 = Debug|Win32
+		{478495D5-8E24-47C9-9F08-37F36CCA742C}.Release|x86.ActiveCfg = Release|Win32
+		{478495D5-8E24-47C9-9F08-37F36CCA742C}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {B8B3A837-7B7E-4BE4-B070-53D2A7E65118}
+	EndGlobalSection
+EndGlobal

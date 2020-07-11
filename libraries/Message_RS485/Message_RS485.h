@@ -1,6 +1,12 @@
 // Rev: 07/16/18
 // Message_RS485 handles RS485 (and *not* digital-pin) communications, via a specified serial port.
 
+// 09-06-18: IMPORTANT IMPORTANT IMPORTANT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// RS 485 is not really a parent class. The base class should define qualities common to all objects derived from the base. I’m just
+// thinking that digital lines are not related to 485.  Relationship is more of a “has a“ rather than a “is a kind of“ relationship.
+// Just like my display class has an LED display, yet is not a kind of LED display.
+
+
 // This class does *not* contain the byte-level/field-level knowledge of RS485 messages specific to each module.
 // However, it does know the byte locations of the fields for LENGTH, TO, FROM, and TYPE, and handles checksums.
 
