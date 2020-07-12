@@ -93,6 +93,7 @@ void setup() {
   sendToLCD("RS485 Receive");
   delay(1000);
   while(Serial2.read() > 0) {   // Clear out incoming RS485 serial buffer
+    sendToLCD("Found init garbage.");
    delay(1);
   }  
   // delay(1000); // Added to just wait, but not so long that we miss the first broadcast from A_MAS
